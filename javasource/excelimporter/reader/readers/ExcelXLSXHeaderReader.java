@@ -33,7 +33,7 @@ public class ExcelXLSXHeaderReader extends ExcelXLSXReader implements ExcelHeada
 	public static ILogNode logNode = Core.getLogger("ExcelXLSXHeaderReader");
 	private List<ExcelColumn> excelColumns;
 
-	public ExcelXLSXHeaderReader( String fullPathExcelFile, int sheetNr, int rowNr ) throws CoreException, IOException, SAXException, OpenXML4JException {
+	public ExcelXLSXHeaderReader( String fullPathExcelFile, int sheetNr, int rowNr, int columnCount ) throws CoreException, IOException, SAXException, OpenXML4JException {
 		OPCPackage opcPackage = null;
 		InputStream sheet = null;
 		try {
@@ -52,7 +52,7 @@ public class ExcelXLSXHeaderReader extends ExcelXLSXReader implements ExcelHeada
 			XMLReader parser = XMLReaderFactory.createXMLReader();
 			ExcelXLSXReader.setXMLReaderProperties(parser);
 			logNode.trace("Loaded SAX Parser: " + parser);
-			SheetHandler handler = new SheetHandler(stringsTable, stylesTable, rowNr + 1, sheetNr);
+			SheetHandler handler = new SheetHandler(stringsTable, stylesTable, rowNr + 1, sheetNr, columnCount);
 			parser.setContentHandler(handler);
 
             ArrayList<PackagePart> sheets = opcPackage.getPartsByContentType(XSSFRelation.WORKSHEET.getContentType());
@@ -82,8 +82,8 @@ public class ExcelXLSXHeaderReader extends ExcelXLSXReader implements ExcelHeada
 		private int headerRowNr = -1;
 		private ExcelValueParser valueParser;
 
-		private SheetHandler( ReadOnlySharedStringsTable stringsTable, StylesTable stylesTable, int rowNr, int sheetNr ) {
-			super(stringsTable, stylesTable, sheetNr, rowNr);
+		private SheetHandler( ReadOnlySharedStringsTable stringsTable, StylesTable stylesTable, int rowNr, int sheetNr, int columnCount ) {
+			super(stringsTable, stylesTable, sheetNr, rowNr, columnCount);
 
 			this.headerRowNr = rowNr;
 			this.valueParser = new ExcelValueParser(null, null);
@@ -104,9 +104,6 @@ public class ExcelXLSXHeaderReader extends ExcelXLSXReader implements ExcelHeada
 					this.isProcessingHeaderRow = true;
 				else
 					this.isProcessingHeaderRow = false;
-			}
-			else if ( localName.equals("dimension") ) { // only encountered once
-				evaluateDimension(attributes);
 			}
 		}
 

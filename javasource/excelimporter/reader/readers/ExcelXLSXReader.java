@@ -1,6 +1,7 @@
 package excelimporter.reader.readers;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.BuiltinFormats;
@@ -20,6 +21,8 @@ import com.mendix.core.Core;
 import replication.ValueParser;
 import replication.ValueParser.ParseException;
 import excelimporter.reader.readers.ExcelRowProcessor.ExcelCellData;
+
+import javax.xml.XMLConstants;
 
 public abstract class ExcelXLSXReader {
 
@@ -49,7 +52,7 @@ public abstract class ExcelXLSXReader {
 		private ExcelCellData[] values;
 
 
-		protected ExcelSheetHandler( ReadOnlySharedStringsTable stringsTable, StylesTable stylesTable, int sheetNr, int startRowNr ) {
+		protected ExcelSheetHandler( ReadOnlySharedStringsTable stringsTable, StylesTable stylesTable, int sheetNr, int startRowNr, int columnCount ) {
 			this.formatter = new DataFormatter();
 			this.stylesTable = stylesTable;
 			this.stringsTable = stringsTable;
@@ -60,8 +63,7 @@ public abstract class ExcelXLSXReader {
 			this.cellValue = new StringBuilder();
 			this.formula = new StringBuilder();
 
-			this.values = null; // will be assigned when we encounter the dimension node. (Parser will fail without this
-								// node, but it seems always present.)
+			this.values = new ExcelCellData[columnCount];
 		}
 
 		@Override
@@ -261,40 +263,25 @@ public abstract class ExcelXLSXReader {
 			return cellData;
 		}
 
-		protected int evaluateDimension( Attributes attributes ) throws SAXException {
-			String dim = null;
-			try {
-				dim = attributes.getValue("ref");
-				String[] fromTo = dim.split(":");
-
-				int colTo = (fromTo.length == 1) ? parseCol(fromTo[0]) : parseCol(fromTo[1]);
-				this.values = new ExcelCellData[colTo + 1];
-
-				return colTo;
-			}
-			catch( Exception e ) {
-				throw new SAXException("Problem parsing Excel sheet dimension: " + (dim != null ? dim : "no ref attribute?"));
-			}
-		}
-
-
 		protected void closeTextProcessing( String localName, boolean useColumn ) throws SAXException {
 			if ( isTextTag(localName, useColumn) ) {
 				this.isProcessingCellValue = false;
 				ExcelCellData cellData = evaluateCellData();
 
+				if (this.getCurrentColumnNr() >= this.values.length) {
+					this.values = Arrays.copyOf(this.values, this.getCurrentColumnNr() + 1);
+				}
 				this.values[this.getCurrentColumnNr()] = cellData;
+	
 				this.isProcessingCellValue = false;
 			}
-
 		}
-
 
 		protected boolean isTextTag( String localName, boolean useColumn ) {
 			if ( this.handleRow && useColumn ) {
 				if ( localName.equals("v") )
 					return true;
-				if ( "inlineStr".equals(localName) )
+				if ( localName.equals("is") || localName.equals("inlineStr") )
 					return true;
 				if ( localName.equals("t") && this.isProcessingCellValue )
 					return true;
@@ -362,10 +349,20 @@ public abstract class ExcelXLSXReader {
 	 */
 	static void setXMLReaderProperties(XMLReader parser) throws SAXNotRecognizedException, SAXNotSupportedException {
 		boolean isExternalEntitiesEnabled = Boolean.valueOf("true").equals(Core.getConfiguration().getConstantValue("ExcelImporter.EnableExternalEntities"));
-		
+		if (isExternalEntitiesEnabled) {
+			Core.getLogger("ExcelImporter").warn("Setting ExcelImporter.EnableExternalEntities is deprecated for security reasons.");
+		}
+
+		// disable/enable external entities
 		parser.setFeature("http://xml.org/sax/features/external-general-entities", isExternalEntitiesEnabled);
 		parser.setFeature("http://xml.org/sax/features/external-parameter-entities", isExternalEntitiesEnabled);
 		parser.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", isExternalEntitiesEnabled);
+		parser.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", isExternalEntitiesEnabled);
+
+		// secure parsing
+		boolean secureParsing = !isExternalEntitiesEnabled;
+		parser.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, secureParsing);
+		parser.setFeature("http://apache.org/xml/features/disallow-doctype-decl", secureParsing);
 	}
 
 	protected enum ExcelType {

@@ -21,7 +21,7 @@ import java.util.function.Predicate;
 
 public class ExcelXLSXDataReader {
 
-	public static long readData(String fullPathExcelFile, int sheetNr, int startRowNr, ExcelRowProcessor excelRowProcessor, Predicate<String> isColumnUsed)
+	public static long readData(String fullPathExcelFile, int sheetNr, int startRowNr, int columnCount, ExcelRowProcessor excelRowProcessor, Predicate<String> isColumnUsed)
 			throws IOException, OpenXML4JException, SAXException, ExcelRuntimeException {
 		OPCPackage opcPackage = null;
 		InputStream sheet = null;
@@ -34,8 +34,7 @@ public class ExcelXLSXDataReader {
 			XMLReader parser = XMLReaderFactory.createXMLReader();
 			ExcelXLSXReader.setXMLReaderProperties(parser);
 			ExcelReader.logNode.trace("Loaded SAX Parser: " + parser);
-			SheetHandler handler = new SheetHandler(isColumnUsed, stringsTable, stylesTable, startRowNr + 1, excelRowProcessor,
-					sheetNr);
+			SheetHandler handler = new SheetHandler(isColumnUsed, stringsTable, stylesTable, startRowNr + 1, excelRowProcessor, sheetNr, columnCount);
 			parser.setContentHandler(handler);
 
             ArrayList<PackagePart> sheets = opcPackage.getPartsByContentType(XSSFRelation.WORKSHEET.getContentType());
@@ -75,14 +74,16 @@ public class ExcelXLSXDataReader {
 		private boolean handleCol = false;
 
 		private ExcelRowProcessor excelRowProcessor;
-		private Predicate<String> isColumnUsed;
 
 		private SheetHandler(Predicate<String> isColumnUsed, ReadOnlySharedStringsTable stringsTable, StylesTable stylesTable,
-                             int startRowNr, ExcelRowProcessor excelRowProcessor, int sheetNr) {
-			super(stringsTable, stylesTable, sheetNr, startRowNr);
+                             int startRowNr, ExcelRowProcessor excelRowProcessor, int sheetNr, int columnCount) {
+			super(stringsTable, stylesTable, sheetNr, startRowNr, columnCount);
 			this.excelRowProcessor = excelRowProcessor;
 
-			this.isColumnUsed = isColumnUsed;
+			this.columnsUsed = new boolean[columnCount];
+			for (int i = 0; i < this.columnsUsed.length; i++) {
+				this.columnsUsed[i] = isColumnUsed.test(String.valueOf(i));
+			}
 		}
 
 		@Override
@@ -99,13 +100,6 @@ public class ExcelXLSXDataReader {
 				}
 			} else if (evaluateFormula(name)) {
 			} else if (evaluateRow(localName, attributes)) {
-			} else if (localName.equals("dimension")) { // only encountered once
-				int colTo = evaluateDimension(attributes);
-
-				this.columnsUsed = new boolean[colTo + 1];
-				for (int i = 0; i < this.columnsUsed.length; i++) {
-					this.columnsUsed[i] = this.isColumnUsed.test(String.valueOf(i));
-				}
 			}
 		}
 
@@ -137,6 +131,5 @@ public class ExcelXLSXDataReader {
 				}
 			}
 		}
-
 	}
 }

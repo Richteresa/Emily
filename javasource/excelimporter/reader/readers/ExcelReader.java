@@ -102,6 +102,16 @@ public class ExcelReader {
 			logNode.info(sb.toString());
 			long importStartTime = System.nanoTime();
 
+			HashMap<String, String> sortMap = new HashMap<>();
+			sortMap.put(Column.MemberNames.ColNumber.toString(), "DESC");
+			String xPath = String.format("//%s[%s=%d][%s='%s']", Column.getType(),
+					Column.MemberNames.Column_Template, template.getId().toLong(),
+					Column.MemberNames.DataSource, DataSource.CellValue);
+			List<IMendixObject> maxColumn = Core.retrieveXPathQuery(context, xPath, 1, 0, sortMap);
+			int columnCount = (maxColumn.size() > 0)
+				? (Integer) maxColumn.get(0).getValue(context, Column.MemberNames.ColNumber.toString()) + 1
+				: 0;
+
 			File excelFile = null;
 			
 			try {
@@ -128,7 +138,7 @@ public class ExcelReader {
 					}
 					case XLSX: {
 						excelFile = getExcelFile(context, templateDocument);
-						header = new ExcelXLSXHeaderReader(excelFile.getAbsolutePath(), sheetIndex, rowIndex);
+						header = new ExcelXLSXHeaderReader(excelFile.getAbsolutePath(), sheetIndex, rowIndex, columnCount);
 						break;
 					}
 					case UNKNOWN:
@@ -193,6 +203,7 @@ public class ExcelReader {
 		HashMap<String, String> sortMap = new HashMap<String, String>();
 		sortMap.put(Column.MemberNames.ColNumber.toString(), "ASC");
 		List<IMendixObject> columns = Core.retrieveXPathQuery(this.settings.getContext(), "//" + Column.getType() + "[" + Column.MemberNames.Column_Template + "=" + template.getId().toLong() + "]", Integer.MAX_VALUE, 0, sortMap);
+		int columnCount = 0;
 		for( IMendixObject column : columns ) {
 			DataSource ds = DataSource.valueOf( (String)column.getValue(this.settings.getContext(), Column.MemberNames.DataSource.toString()) );
 			MappingType type = MappingType.valueOf((String)column.getValue(this.settings.getContext(), Column.MemberNames.MappingType.toString()));
@@ -201,6 +212,9 @@ public class ExcelReader {
 			DocProperties docProps = null;
 			if( ds == DataSource.CellValue ) {
 				Integer colNr = (Integer) column.getValue(this.settings.getContext(), Column.MemberNames.ColNumber.toString());
+				if( colNr >= columnCount ) {
+					columnCount = colNr + 1;
+				}
 				fieldIdentifier = colNr.toString();
 			}
 			else {
@@ -367,7 +381,7 @@ public class ExcelReader {
 					logNode.debug("nrOfCols: " + nrOfCols);
 
 					excelFile = getExcelFile(this.settings.getContext(), fileDocument);
-					this.rowcounts = ExcelXLSXDataReader.readData(excelFile.getAbsolutePath(), sheetIndex, startRowIndex, new ExcelRowProcessorImpl(getSettings(), getDocPropertiesMapping()), getSettings()::aliasIsMapped);
+					this.rowcounts = ExcelXLSXDataReader.readData(excelFile.getAbsolutePath(), sheetIndex, startRowIndex, columnCount, new ExcelRowProcessorImpl(getSettings(), getDocPropertiesMapping()), getSettings()::aliasIsMapped);
 					break;
 				}
 				case UNKNOWN:

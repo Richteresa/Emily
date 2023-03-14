@@ -19,6 +19,11 @@ public class ExcelColumn {
 		return this.colNr;
 	}
 
+	@Override
+	public int hashCode() {
+		return colNr + 31 * Objects.hash(caption);
+	}
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

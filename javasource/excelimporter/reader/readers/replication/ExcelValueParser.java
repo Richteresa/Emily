@@ -14,8 +14,6 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
-import org.apache.poi.hssf.usermodel.HSSFDateUtil;
-
 import org.apache.poi.ss.usermodel.DateUtil;
 import replication.ReplicationSettings;
 import replication.ValueParser;
@@ -90,14 +88,14 @@ public class ExcelValueParser extends ValueParser {
 			return parseToDateTime(column, cellData);
 		}
 		else if (type == PrimitiveType.Decimal || type == PrimitiveType.Integer || type == PrimitiveType.Long) {
-			BigDecimal parsed = parseToNumber(cellData);
-			if (parsed == null)
+			Object parsed = parseToNumber(column, cellData);
+			if (!(parsed instanceof BigDecimal))
 				throw new ParseException("Could not parse value '" + cellData.getFormattedData() + "' to " + type.name() + " in column #" + (cellData.getColNr() + 1));
 			try {
 				if (type == PrimitiveType.Long) {
-					return parsed.setScale(0, RoundingMode.FLOOR).longValueExact();
+					return ((BigDecimal) parsed).setScale(0, RoundingMode.FLOOR).longValueExact();
 				} else if (type == PrimitiveType.Integer) {
-					return parsed.setScale(0, RoundingMode.FLOOR).intValueExact();
+					return ((BigDecimal) parsed).setScale(0, RoundingMode.FLOOR).intValueExact();
 				} else
 					return parsed;
 			} catch (ArithmeticException ae) {
@@ -115,23 +113,23 @@ public class ExcelValueParser extends ValueParser {
 			return getValue(type, column, cellData.getRawData());
 	}
 
-	private BigDecimal parseToNumber(ExcelCellData cellData) throws ParseException {
+	private Object parseToNumber(String column, ExcelCellData cellData) throws ParseException {
 		if (cellData.getRawData() instanceof Number) {
 			boolean isPercentage = cellData.getFormattedData() != null && cellData.getFormattedData().toString().endsWith("%");
 			Number rawData = (Number) cellData.getRawData();
-			if (isPercentage) {
-				return BigDecimal.valueOf(rawData.doubleValue()).multiply(BigDecimal.valueOf(100));
-			} else
-				return BigDecimal.valueOf(rawData.doubleValue()).stripTrailingZeros();
+			BigDecimal value = (isPercentage)
+				? BigDecimal.valueOf(rawData.doubleValue()).multiply(BigDecimal.valueOf(100))
+				: BigDecimal.valueOf(rawData.doubleValue()).stripTrailingZeros();
+			return getValue(PrimitiveType.Decimal, column, value);
 		} else {
 			String number = (cellData.getFormattedData() != null) ? cellData.getFormattedData().toString() : cellData.getRawData().toString();
 			ParsePosition position = new ParsePosition(0);
 			DecimalFormat numberFormat = (DecimalFormat) NumberFormat.getInstance(Locale.US);
 			numberFormat.setParseBigDecimal(true);
 			BigDecimal parsed = (BigDecimal) numberFormat.parse(number, position);
-			String couldNoBeParsed = number.substring(position.getIndex());
-			if (couldNoBeParsed.length() <= 1) // trailing $, €, % symbols are ignored
-				return parsed;
+			String couldNotBeParsed = number.substring(position.getIndex());
+			if (parsed != null && couldNotBeParsed.length() <= 1) // trailing $, €, % symbols are ignored
+				return getValue(PrimitiveType.Decimal, column, parsed);
 			else
 				throw new ValueParser.ParseException(number + " is not a valid number!");
 		}
@@ -188,7 +186,7 @@ public class ExcelValueParser extends ValueParser {
 	 */
 	@SuppressWarnings("static-access")
 	public static Date getJavaDate( double date, boolean use1904windowing ) {
-		if ( !HSSFDateUtil.isValidExcelDate(date) ) {
+		if ( !DateUtil.isValidExcelDate(date) ) {
 			return null;
 		}
 		int wholeDays = (int) Math.floor(date);
