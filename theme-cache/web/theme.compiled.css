@@ -11541,6 +11541,7 @@ div.dijitTabDisabled,
 .mx-tabcontainer-content,
 .mx-grid-content {
   -webkit-overflow-scrolling: touch;
+  overflow-x: scroll;
 }
 
 html,
