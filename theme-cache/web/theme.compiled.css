@@ -11536,12 +11536,17 @@ div.dijitTabDisabled,
 
 /* Global Bootstrap changes */
 /* Client defaults and helpers */
-.mx-dataview-content,
+.mx-dataview-content {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
 .mx-scrollcontainer-wrapper:not(.mx-scrollcontainer-nested),
 .mx-tabcontainer-content,
 .mx-grid-content {
   -webkit-overflow-scrolling: touch;
-  overflow-x: scroll;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 html,
@@ -12253,6 +12258,8 @@ input[type=checkbox] {
 .mx-window-content {
   height: 100%;
   overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 .mx-window-active .mx-window-header {
