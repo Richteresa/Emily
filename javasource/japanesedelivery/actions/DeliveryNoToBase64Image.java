@@ -39,7 +39,7 @@ public class DeliveryNoToBase64Image extends CustomJavaAction<java.lang.String>
 		// BEGIN USER CODE
 		try {
 			BufferedImage image = getJbarcode().createBarcode(deliveryNo);
-			
+
 			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 			ImageIO.write(image, "jpg", outputStream);
 			java.util.Base64.Encoder encoder = Base64.getEncoder();
