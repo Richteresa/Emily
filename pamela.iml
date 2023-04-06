@@ -183,7 +183,9 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="userlib" level="project" />
     <orderEntry type="library" name="bundles" level="project" />
+    <orderEntry type="library" name="bundles1" level="project" />
+    <orderEntry type="library" name="userlib" level="project" />
+    <orderEntry type="library" name="pdfbox-2.0.24" level="project" />
   </component>
 </module>
