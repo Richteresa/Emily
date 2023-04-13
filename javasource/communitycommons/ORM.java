@@ -349,6 +349,9 @@ public class ORM {
 				continue;
 			}
 
+			if(e.getName().contains("createdDate") || e.getName().contains("changedDate")
+				|| e.getName().contains("owner") || e.getName().contains("changedBy")) { continue;}
+
 			target.setValue(context, e.getName(), source.getValue(context, e.getName()));
 		}
 	}
