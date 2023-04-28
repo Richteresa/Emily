@@ -40,8 +40,9 @@ public class MatchProductTaxConfig extends CustomJavaAction<IMendixObject>
 		// BEGIN USER CODE
 //		throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
 		for(ProductTaxConfig perConfig : productTaxConfigList){
-			// if(perConfig.getproductName().contains(itemName)|| itemName.contains(perConfig.getproductName())){}
-			if(containsIgnoreCase(perConfig.getproductName(),itemName)||containsIgnoreCase(itemName,perConfig.getproductName())){
+			if(perConfig.getproductName().equalsIgnoreCase(itemName)|| itemName.equalsIgnoreCase(perConfig.getproductName())){
+				return perConfig.getMendixObject();
+			}else if(containsIgnoreCase(perConfig.getproductName(),itemName)||containsIgnoreCase(itemName,perConfig.getproductName())){
 				return perConfig.getMendixObject();
 			}
 		}
