@@ -17,17 +17,17 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 {
 	private IMendixObject __ztoImportBcOrder;
 	private japanesedelivery.proxies.ZtoImportBcOrder ztoImportBcOrder;
-	private java.util.List<IMendixObject> __intlOrderItemList;
-	private java.util.List<japanesedelivery.proxies.IntlOrderItem> intlOrderItemList;
-	private IMendixObject __orderEntity;
-	private japanesedelivery.proxies.OrderEntity orderEntity;
+	private java.util.List<IMendixObject> __ztoIntlOrderItemList;
+	private java.util.List<japanesedelivery.proxies.ZtoIntlOrderItem> ztoIntlOrderItemList;
+	private IMendixObject __ztoOrderEntity;
+	private japanesedelivery.proxies.ZtoOrderEntity ztoOrderEntity;
 
-	public ZtoAddBcImportOrder(IContext context, IMendixObject ztoImportBcOrder, java.util.List<IMendixObject> intlOrderItemList, IMendixObject orderEntity)
+	public ZtoAddBcImportOrder(IContext context, IMendixObject ztoImportBcOrder, java.util.List<IMendixObject> ztoIntlOrderItemList, IMendixObject ztoOrderEntity)
 	{
 		super(context);
 		this.__ztoImportBcOrder = ztoImportBcOrder;
-		this.__intlOrderItemList = intlOrderItemList;
-		this.__orderEntity = orderEntity;
+		this.__ztoIntlOrderItemList = ztoIntlOrderItemList;
+		this.__ztoOrderEntity = ztoOrderEntity;
 	}
 
 	@java.lang.Override
@@ -35,13 +35,13 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 	{
 		this.ztoImportBcOrder = this.__ztoImportBcOrder == null ? null : japanesedelivery.proxies.ZtoImportBcOrder.initialize(getContext(), __ztoImportBcOrder);
 
-		this.intlOrderItemList = java.util.Optional.ofNullable(this.__intlOrderItemList)
+		this.ztoIntlOrderItemList = java.util.Optional.ofNullable(this.__ztoIntlOrderItemList)
 			.orElse(java.util.Collections.emptyList())
 			.stream()
-			.map(__intlOrderItemListElement -> japanesedelivery.proxies.IntlOrderItem.initialize(getContext(), __intlOrderItemListElement))
+			.map(__ztoIntlOrderItemListElement -> japanesedelivery.proxies.ZtoIntlOrderItem.initialize(getContext(), __ztoIntlOrderItemListElement))
 			.collect(java.util.stream.Collectors.toList());
 
-		this.orderEntity = this.__orderEntity == null ? null : japanesedelivery.proxies.OrderEntity.initialize(getContext(), __orderEntity);
+		this.ztoOrderEntity = this.__ztoOrderEntity == null ? null : japanesedelivery.proxies.ZtoOrderEntity.initialize(getContext(), __ztoOrderEntity);
 
 		// BEGIN USER CODE
 		throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
