@@ -12,6 +12,15 @@ package japanesedelivery.actions;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
+import com.mendix.core.Core;
+import cn.hutool.json.JSONUtil;
+import com.zto.intl.common.util.HttpInvoke;
+import japanesedelivery.proxies.IntlOrderItem;
+import japanesedelivery.proxies.ZtoIntlImportOrderRes;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 {
@@ -44,7 +53,91 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		this.ztoOrderEntity = this.__ztoOrderEntity == null ? null : japanesedelivery.proxies.ZtoOrderEntity.initialize(getContext(), __ztoOrderEntity);
 
 		// BEGIN USER CODE
-		throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
+		Map<String, Object> ztoImportBcOrderMap = new HashMap<>();
+		ztoImportBcOrderMap.put("orderId",ztoImportBcOrder.getorderId());
+//		ztoImportBcOrderMap.put("logisticsId", ztoImportBcOrder.getlogisticsId());
+		ztoImportBcOrderMap.put("consignee", ztoImportBcOrder.getconsignee());
+		ztoImportBcOrderMap.put("consigneeAddress", ztoImportBcOrder.getconsigneeAddress());
+		ztoImportBcOrderMap.put("consigneeCity", ztoImportBcOrder.getconsigneeCity());
+		ztoImportBcOrderMap.put("consigneeCountry", ztoImportBcOrder.getconsigneeCountry());
+		ztoImportBcOrderMap.put("consigneeDistrict", ztoImportBcOrder.getconsigneeDistrict());
+		ztoImportBcOrderMap.put("consigneeMobile", ztoImportBcOrder.getconsigneeMobile());
+		ztoImportBcOrderMap.put("consigneeProv", ztoImportBcOrder.getconsigneeProv());
+//		ztoImportBcOrderMap.put("consigneeTelephone", ztoImportBcOrder.getconsigneeTelephone());
+//		ztoImportBcOrderMap.put("consigneeZipCode", ztoImportBcOrder.getconsigneeZipCode());
+		ztoImportBcOrderMap.put("customsCode", ztoImportBcOrder.getcustomsCode());
+		ztoImportBcOrderMap.put("customerId", ztoImportBcOrder.getcustomerId());
+		ztoImportBcOrderMap.put("idType", ztoImportBcOrder.getidType());
+		ztoImportBcOrderMap.put("ieType", ztoImportBcOrder.getieType());
+		ztoImportBcOrderMap.put("netWeight", ztoImportBcOrder.getnetWeight());
+		ztoImportBcOrderMap.put("platformSource", ztoImportBcOrder.getplatformSource());
+		ztoImportBcOrderMap.put("shipType", ztoImportBcOrder.getshipType());
+		ztoImportBcOrderMap.put("shipper", ztoImportBcOrder.getshipper());
+		ztoImportBcOrderMap.put("shipperAddress", ztoImportBcOrder.getshipperAddress());
+		ztoImportBcOrderMap.put("shipperCity", ztoImportBcOrder.getshipperCity());
+		ztoImportBcOrderMap.put("shipperCountry", ztoImportBcOrder.getshipperCountry());
+		ztoImportBcOrderMap.put("shipperDistrict", ztoImportBcOrder.getshipperDistrict());
+//		ztoImportBcOrderMap.put("shipperMobile", ztoImportBcOrder.getshipperMobile());
+		ztoImportBcOrderMap.put("shipperProv", ztoImportBcOrder.getshipperProv());
+//		ztoImportBcOrderMap.put("shipperTelephone", ztoImportBcOrder.getshipperTelephone());
+//		ztoImportBcOrderMap.put("shipperZipCode", ztoImportBcOrder.getshipperZipCode());
+		ztoImportBcOrderMap.put("stockFlag", ztoImportBcOrder.getstockFlag());
+		ztoImportBcOrderMap.put("warehouseCode", "au001");
+		ztoImportBcOrderMap.put("weight", ztoImportBcOrder.getweight());
+
+		Map<String, Object> orderEntityMap = new HashMap<>();
+		orderEntityMap.put("payableWeight", orderEntity.getpayableWeight());
+		orderEntityMap.put("remark", orderEntity.getremark());
+		orderEntityMap.put("totalShippingFee", orderEntity.gettotalShippingFee());
+		orderEntityMap.put("totalShippingFeeUnit", orderEntity.gettotalShippingFeeUnit());
+		orderEntityMap.put("tradeOrderValue", orderEntity.gettradeOrderValue());
+		orderEntityMap.put("tradeOrderValueUnit", orderEntity.gettradeOrderValueUnit());
+
+		ztoImportBcOrderMap.put("orderEntity", orderEntityMap);
+
+		List<Map<String, Object>> intlOrderItemList2 = new ArrayList<>();
+
+		for( IntlOrderItem intlOrderItem : intlOrderItemList) {
+			Map<String, Object> intlOrderItemMap = new HashMap<>();
+			intlOrderItemMap.put("currencyType", intlOrderItem.getcurrencyType());
+			intlOrderItemMap.put("itemId", intlOrderItem.getitemId());
+			intlOrderItemMap.put("itemName", intlOrderItem.getitemName());
+			intlOrderItemMap.put("itemQuantity", intlOrderItem.getitemQuantity());
+			intlOrderItemMap.put("itemUnit", intlOrderItem.getitemUnit());
+			intlOrderItemMap.put("itemUnitPrice", intlOrderItem.getitemUnitPrice());
+
+			intlOrderItemList2.add(intlOrderItemMap);
+		}
+		ztoImportBcOrderMap.put("intlOrderItemList", intlOrderItemList2);
+
+//		Object value = ztoImportBcOrderMap.get("oldKey");
+//		// Remove the entry with the old key
+//		ztoImportBcOrderMap.remove("oldKey");
+//		// Add a new entry with the updated key and the retrieved value
+//		ztoImportBcOrderMap.put("newKey", value);
+
+		//ztoImportBcOrderMap.put("intlOrderItemList",intlOrderItemList);
+
+		//		String invokeResult = HttpInvoke.create("https://izop.zt-express.com/oms/api")
+//				.setAppCode(appCode)
+//				.setMethod("addBcImportOrder")
+//				.setSecretKey(secretKey)
+//				.setData(JSONUtil.toJsonStr(。。。))
+//				.build()
+//				.invoke();
+
+		String  secretKey = "";
+		//String responseBody = HttpInvoke.getDecodeData(secretKey, invokeResult);
+
+		IMendixObject respVO= Core.instantiate(getContext(), ZtoIntlImportOrderRes.getType());
+		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId), JSONUtil.toJsonStr(ztoImportBcOrderMap));
+//
+//		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),ztoImportBcOrder.getorderId());
+//		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),ztoImportBcOrder.getOrderEntity_ZtoImportBcOrder().getremark());
+//		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),intlOrderItemList.get(1).getitemName());
+
+		return  respVO;
+		// throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
 		// END USER CODE
 	}
 
