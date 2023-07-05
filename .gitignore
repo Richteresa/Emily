@@ -14,3 +14,7 @@
 /**/node_modules/
 !/javascriptsource/**/node_modules/
 /nativemobile/builds/
+.idea/sonarlint/issuestore/index.pb
+.idea/runConfigurations.xml
+.idea/misc.xml
+.idea/misc.xml
