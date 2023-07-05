@@ -9,14 +9,21 @@
 
 package japanesedelivery.actions;
 
+import com.google.common.collect.Maps;
+import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.core.Core;
 import cn.hutool.json.JSONUtil;
+import com.zto.intl.common.model.PostBody;
+import com.zto.intl.common.util.DesUtil;
 import com.zto.intl.common.util.HttpInvoke;
-import japanesedelivery.proxies.IntlOrderItem;
+import com.zto.intl.common.util.HttpUtil;
+import com.zto.intl.common.util.MD5;
 import japanesedelivery.proxies.ZtoIntlImportOrderRes;
+import japanesedelivery.proxies.ZtoIntlOrderItem;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -70,7 +77,7 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		ztoImportBcOrderMap.put("idType", ztoImportBcOrder.getidType());
 		ztoImportBcOrderMap.put("ieType", ztoImportBcOrder.getieType());
 		ztoImportBcOrderMap.put("netWeight", ztoImportBcOrder.getnetWeight());
-		ztoImportBcOrderMap.put("platformSource", ztoImportBcOrder.getplatformSource());
+		ztoImportBcOrderMap.put("platformSource", "10661");
 		ztoImportBcOrderMap.put("shipType", ztoImportBcOrder.getshipType());
 		ztoImportBcOrderMap.put("shipper", ztoImportBcOrder.getshipper());
 		ztoImportBcOrderMap.put("shipperAddress", ztoImportBcOrder.getshipperAddress());
@@ -86,18 +93,18 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		ztoImportBcOrderMap.put("weight", ztoImportBcOrder.getweight());
 
 		Map<String, Object> orderEntityMap = new HashMap<>();
-		orderEntityMap.put("payableWeight", orderEntity.getpayableWeight());
-		orderEntityMap.put("remark", orderEntity.getremark());
-		orderEntityMap.put("totalShippingFee", orderEntity.gettotalShippingFee());
-		orderEntityMap.put("totalShippingFeeUnit", orderEntity.gettotalShippingFeeUnit());
-		orderEntityMap.put("tradeOrderValue", orderEntity.gettradeOrderValue());
-		orderEntityMap.put("tradeOrderValueUnit", orderEntity.gettradeOrderValueUnit());
+		orderEntityMap.put("payableWeight", ztoOrderEntity.getpayableWeight());
+		orderEntityMap.put("remark", ztoOrderEntity.getremark());
+		orderEntityMap.put("totalShippingFee", ztoOrderEntity.gettotalShippingFee());
+		orderEntityMap.put("totalShippingFeeUnit", ztoOrderEntity.gettotalShippingFeeUnit());
+		orderEntityMap.put("tradeOrderValue", ztoOrderEntity.gettradeOrderValue());
+		orderEntityMap.put("tradeOrderValueUnit", ztoOrderEntity.gettradeOrderValueUnit());
 
 		ztoImportBcOrderMap.put("orderEntity", orderEntityMap);
 
 		List<Map<String, Object>> intlOrderItemList2 = new ArrayList<>();
 
-		for( IntlOrderItem intlOrderItem : intlOrderItemList) {
+		for( ZtoIntlOrderItem intlOrderItem : ztoIntlOrderItemList) {
 			Map<String, Object> intlOrderItemMap = new HashMap<>();
 			intlOrderItemMap.put("currencyType", intlOrderItem.getcurrencyType());
 			intlOrderItemMap.put("itemId", intlOrderItem.getitemId());
@@ -105,32 +112,34 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 			intlOrderItemMap.put("itemQuantity", intlOrderItem.getitemQuantity());
 			intlOrderItemMap.put("itemUnit", intlOrderItem.getitemUnit());
 			intlOrderItemMap.put("itemUnitPrice", intlOrderItem.getitemUnitPrice());
-
 			intlOrderItemList2.add(intlOrderItemMap);
 		}
 		ztoImportBcOrderMap.put("intlOrderItemList", intlOrderItemList2);
 
-//		Object value = ztoImportBcOrderMap.get("oldKey");
-//		// Remove the entry with the old key
-//		ztoImportBcOrderMap.remove("oldKey");
-//		// Add a new entry with the updated key and the retrieved value
-//		ztoImportBcOrderMap.put("newKey", value);
+		ILogNode logger = Core.getLogger("JapaneseDelivery");
+		logger.info("ZTO request: "+JSONUtil.toJsonStr(ztoImportBcOrderMap));
+		String  secretKey = "7r*cQSA#";
 
-		//ztoImportBcOrderMap.put("intlOrderItemList",intlOrderItemList);
+		long timestamp = System.currentTimeMillis();
+		String url = buildUrl("https://izop.zt-express.com/oms/api?", "addBcImportOrder", "10661", timestamp);
+		String encodeData = getEncodeData(secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap), timestamp);
+		logger.info("ZTO url:"+url+ "; request encodeData: " + encodeData);
 
-		//		String invokeResult = HttpInvoke.create("https://izop.zt-express.com/oms/api")
-//				.setAppCode(appCode)
-//				.setMethod("addBcImportOrder")
-//				.setSecretKey(secretKey)
-//				.setData(JSONUtil.toJsonStr(。。。))
-//				.build()
-//				.invoke();
+		String invokeResult = HttpUtil.sendPostJson(url, encodeData);
+		logger.info("ZTO response: "+invokeResult);
 
-		String  secretKey = "";
-		//String responseBody = HttpInvoke.getDecodeData(secretKey, invokeResult);
+		String responseBody = HttpInvoke.getDecodeData(secretKey, invokeResult);
+		logger.info("ZTO response DecodeData: "+invokeResult);
+
+		ZtoIntlImportOrderRes ztoIntlImportOrderRes = JSONUtil.toBean(responseBody, ZtoIntlImportOrderRes.class);
 
 		IMendixObject respVO= Core.instantiate(getContext(), ZtoIntlImportOrderRes.getType());
-		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId), JSONUtil.toJsonStr(ztoImportBcOrderMap));
+		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.logisticsId), responseBody);
+		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId), responseBody);
+		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderNo), responseBody);
+		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.sortContent), responseBody);
+		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.bagAddress), responseBody);
+		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.extended), responseBody);
 //
 //		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),ztoImportBcOrder.getorderId());
 //		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),ztoImportBcOrder.getOrderEntity_ZtoImportBcOrder().getremark());
@@ -152,5 +161,30 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 	}
 
 	// BEGIN EXTRA CODE
+	private static String buildUrl(String uri, String method, String appCode, Long timestamp) throws IOException {
+		Map<String, Object> map = Maps.newHashMap();
+		map.put("method", method);
+		map.put("timestamp", timestamp);
+		map.put("appCode", appCode);
+		return HttpUtil.buildRealUrl(uri, map, "UTF-8");
+	}
+
+	public static String getEncodeData(String secretKey, String data, long timestamp) throws Exception {
+		String sendData = getSendData(secretKey, data, timestamp);
+		DesUtil desUtil = DesUtil.setDesKey(secretKey);
+		return desUtil.encode(sendData);
+	}
+
+	private static String getSendData(String secretKey, String data, long timestamp) throws Exception {
+		PostBody body = new PostBody();
+		body.setSign(getSign(secretKey, data, timestamp));
+		body.setData(data);
+		return JSONUtil.toJsonStr(body);
+	}
+
+	private static String getSign(String secretKey, String data, long timestamp) throws Exception {
+		String md5Encode = timestamp + secretKey + data;
+		return MD5.MD5Encode(md5Encode);
+	}
 	// END EXTRA CODE
 }
