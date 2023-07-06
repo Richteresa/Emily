@@ -71,7 +71,7 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		ztoImportBcOrderMap.put("consigneeMobile", ztoImportBcOrder.getconsigneeMobile());
 		ztoImportBcOrderMap.put("consigneeProv", ztoImportBcOrder.getconsigneeProv());
 //		ztoImportBcOrderMap.put("consigneeTelephone", ztoImportBcOrder.getconsigneeTelephone());
-//		ztoImportBcOrderMap.put("consigneeZipCode", ztoImportBcOrder.getconsigneeZipCode());
+		ztoImportBcOrderMap.put("consigneeZipCode", ztoImportBcOrder.getconsigneeZipCode());
 		ztoImportBcOrderMap.put("customsCode", ztoImportBcOrder.getcustomsCode());
 		ztoImportBcOrderMap.put("customerId", ztoImportBcOrder.getcustomerId());
 		ztoImportBcOrderMap.put("idType", ztoImportBcOrder.getidType());
@@ -84,7 +84,7 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		ztoImportBcOrderMap.put("shipperCity", ztoImportBcOrder.getshipperCity());
 		ztoImportBcOrderMap.put("shipperCountry", ztoImportBcOrder.getshipperCountry());
 		ztoImportBcOrderMap.put("shipperDistrict", ztoImportBcOrder.getshipperDistrict());
-//		ztoImportBcOrderMap.put("shipperMobile", ztoImportBcOrder.getshipperMobile());
+		ztoImportBcOrderMap.put("shipperMobile", ztoImportBcOrder.getshipperMobile());
 		ztoImportBcOrderMap.put("shipperProv", ztoImportBcOrder.getshipperProv());
 //		ztoImportBcOrderMap.put("shipperTelephone", ztoImportBcOrder.getshipperTelephone());
 //		ztoImportBcOrderMap.put("shipperZipCode", ztoImportBcOrder.getshipperZipCode());
@@ -121,7 +121,9 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		String  secretKey = "7r*cQSA#";
 
 		long timestamp = System.currentTimeMillis();
-		String url = buildUrl("https://izop.zt-express.com/oms/api?", "addBcImportOrder", "10661", timestamp);
+		// 接口测试地址: https://izop-test.zt-express.com/oms/api
+		// 接口生产地址: https://izop.zt-express.com/oms/api
+		String url = buildUrl("https://izop-test.zt-express.com/oms/api?", "addBcImportOrder", "10661", timestamp);
 		String encodeData = getEncodeData(secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap), timestamp);
 		logger.info("ZTO url:"+url+ "; request encodeData: " + encodeData);
 
@@ -140,10 +142,6 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.sortContent), responseBody);
 		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.bagAddress), responseBody);
 		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.extended), responseBody);
-//
-//		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),ztoImportBcOrder.getorderId());
-//		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),ztoImportBcOrder.getOrderEntity_ZtoImportBcOrder().getremark());
-//		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId),intlOrderItemList.get(1).getitemName());
 
 		return  respVO;
 		// throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
