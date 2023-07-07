@@ -9,6 +9,7 @@
 
 package japanesedelivery.actions;
 
+import cn.hutool.json.JSONObject;
 import com.google.common.collect.Maps;
 import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IContext;
@@ -21,7 +22,7 @@ import com.zto.intl.common.util.DesUtil;
 import com.zto.intl.common.util.HttpInvoke;
 import com.zto.intl.common.util.HttpUtil;
 import com.zto.intl.common.util.MD5;
-import japanesedelivery.proxies.ZtoIntlImportOrderRes;
+import japanesedelivery.proxies.ZtoIntlImportOrderResp;
 import japanesedelivery.proxies.ZtoIntlOrderItem;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -61,8 +62,7 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 
 		// BEGIN USER CODE
 		Map<String, Object> ztoImportBcOrderMap = new HashMap<>();
-		ztoImportBcOrderMap.put("orderId",ztoImportBcOrder.getorderId());
-//		ztoImportBcOrderMap.put("logisticsId", ztoImportBcOrder.getlogisticsId());
+		ztoImportBcOrderMap.put("orderId", ztoImportBcOrder.getorderId());
 		ztoImportBcOrderMap.put("consignee", ztoImportBcOrder.getconsignee());
 		ztoImportBcOrderMap.put("consigneeAddress", ztoImportBcOrder.getconsigneeAddress());
 		ztoImportBcOrderMap.put("consigneeCity", ztoImportBcOrder.getconsigneeCity());
@@ -70,7 +70,6 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		ztoImportBcOrderMap.put("consigneeDistrict", ztoImportBcOrder.getconsigneeDistrict());
 		ztoImportBcOrderMap.put("consigneeMobile", ztoImportBcOrder.getconsigneeMobile());
 		ztoImportBcOrderMap.put("consigneeProv", ztoImportBcOrder.getconsigneeProv());
-//		ztoImportBcOrderMap.put("consigneeTelephone", ztoImportBcOrder.getconsigneeTelephone());
 		ztoImportBcOrderMap.put("consigneeZipCode", ztoImportBcOrder.getconsigneeZipCode());
 		ztoImportBcOrderMap.put("customsCode", ztoImportBcOrder.getcustomsCode());
 		ztoImportBcOrderMap.put("customerId", ztoImportBcOrder.getcustomerId());
@@ -86,12 +85,9 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		ztoImportBcOrderMap.put("shipperDistrict", ztoImportBcOrder.getshipperDistrict());
 		ztoImportBcOrderMap.put("shipperMobile", ztoImportBcOrder.getshipperMobile());
 		ztoImportBcOrderMap.put("shipperProv", ztoImportBcOrder.getshipperProv());
-//		ztoImportBcOrderMap.put("shipperTelephone", ztoImportBcOrder.getshipperTelephone());
-//		ztoImportBcOrderMap.put("shipperZipCode", ztoImportBcOrder.getshipperZipCode());
 		ztoImportBcOrderMap.put("stockFlag", ztoImportBcOrder.getstockFlag());
 		ztoImportBcOrderMap.put("warehouseCode", "au001");
 		ztoImportBcOrderMap.put("weight", ztoImportBcOrder.getweight());
-
 		Map<String, Object> orderEntityMap = new HashMap<>();
 		orderEntityMap.put("payableWeight", ztoOrderEntity.getpayableWeight());
 		orderEntityMap.put("remark", ztoOrderEntity.getremark());
@@ -99,12 +95,9 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		orderEntityMap.put("totalShippingFeeUnit", ztoOrderEntity.gettotalShippingFeeUnit());
 		orderEntityMap.put("tradeOrderValue", ztoOrderEntity.gettradeOrderValue());
 		orderEntityMap.put("tradeOrderValueUnit", ztoOrderEntity.gettradeOrderValueUnit());
-
 		ztoImportBcOrderMap.put("orderEntity", orderEntityMap);
-
 		List<Map<String, Object>> intlOrderItemList2 = new ArrayList<>();
-
-		for( ZtoIntlOrderItem intlOrderItem : ztoIntlOrderItemList) {
+		for (ZtoIntlOrderItem intlOrderItem : ztoIntlOrderItemList) {
 			Map<String, Object> intlOrderItemMap = new HashMap<>();
 			intlOrderItemMap.put("currencyType", intlOrderItem.getcurrencyType());
 			intlOrderItemMap.put("itemId", intlOrderItem.getitemId());
@@ -115,36 +108,46 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 			intlOrderItemList2.add(intlOrderItemMap);
 		}
 		ztoImportBcOrderMap.put("intlOrderItemList", intlOrderItemList2);
-
 		ILogNode logger = Core.getLogger("JapaneseDelivery");
-		logger.info("ZTO request: "+JSONUtil.toJsonStr(ztoImportBcOrderMap));
-		String  secretKey = "7r*cQSA#";
-
+		logger.info("ZTO request: " + JSONUtil.toJsonStr(ztoImportBcOrderMap));
+		String secretKey = "7r*cQSA#";
 		long timestamp = System.currentTimeMillis();
 		// 接口测试地址: https://izop-test.zt-express.com/oms/api
 		// 接口生产地址: https://izop.zt-express.com/oms/api
 		String url = buildUrl("https://izop-test.zt-express.com/oms/api?", "addBcImportOrder", "10661", timestamp);
 		String encodeData = getEncodeData(secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap), timestamp);
-		logger.info("ZTO url:"+url+ "; request encodeData: " + encodeData);
-
-		String invokeResult = HttpUtil.sendPostJson(url, encodeData);
-		logger.info("ZTO response: "+invokeResult);
-
-		String responseBody = HttpInvoke.getDecodeData(secretKey, invokeResult);
-		logger.info("ZTO response DecodeData: "+invokeResult);
-
-		ZtoIntlImportOrderRes ztoIntlImportOrderRes = JSONUtil.toBean(responseBody, ZtoIntlImportOrderRes.class);
-
-		IMendixObject respVO= Core.instantiate(getContext(), ZtoIntlImportOrderRes.getType());
-		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.logisticsId), responseBody);
-		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderId), responseBody);
-		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.orderNo), responseBody);
-		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.sortContent), responseBody);
-		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.bagAddress), responseBody);
-		respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderRes.MemberNames.extended), responseBody);
-
-		return  respVO;
-		// throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
+		logger.info("ZTO url:" + url + "; request encodeData: " + encodeData);
+		IMendixObject respVO = Core.instantiate(getContext(), ZtoIntlImportOrderResp.getType());
+		try {
+			String invokeResult = HttpUtil.sendPostJson(url, encodeData);
+			logger.info("ZTO response: " + invokeResult);
+			String responseData = "";
+			JSONObject zTOResponseBody = new JSONObject(invokeResult);
+			Boolean success = (Boolean) zTOResponseBody.get("success");
+			if (success) {
+				responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
+				JSONObject zTOResponseData = new JSONObject(responseData);
+				respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.logisticsId), zTOResponseData.get("logisticsId"));
+				respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.orderId), zTOResponseData.get("orderId"));
+				respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.orderNo), zTOResponseData.get("orderId"));
+				respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.extended), zTOResponseData.get("extended"));
+			} else {
+				String errorBody = (String) zTOResponseBody.get("error");
+				if (!errorBody.equals("")) {
+					JSONObject zTOResponseError = new JSONObject(errorBody);
+					String code = (String) zTOResponseError.get("code");
+					String message = (String) zTOResponseError.get("message");
+					String validationError = (String) zTOResponseError.get("validationError");
+					respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.message), message);
+					respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.messageDetail), validationError);
+					respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.code), code);
+				}
+			}
+			respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.success), success);
+			return respVO;
+		} catch (Exception e) {
+			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Abnormal interface of the courier company!");
+		}
 		// END USER CODE
 	}
 
