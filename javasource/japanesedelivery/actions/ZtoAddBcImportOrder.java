@@ -65,7 +65,6 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		// BEGIN USER CODE
         Map<String, Object> ztoImportBcOrderMap = addBcImportOrder(ztoImportBcOrder,ztoOrderEntity,ztoIntlOrderItemList);
         ILogNode logger = Core.getLogger("JapaneseDelivery");
-        logger.info("ZTO request: " + JSONUtil.toJsonStr(ztoImportBcOrderMap));
         String secretKey = "7r*cQSA#";
         long timestamp = System.currentTimeMillis();
         String code = "";
@@ -85,32 +84,31 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         IMendixObject respVO = Core.instantiate(getContext(), ZtoIntlImportOrderResp.getType());
         try {
             String invokeResult = invokeZto(urlAddress,addBcImportOrderMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap));
-            logger.info("ZTO response: " + invokeResult);
+            logger.info("ZTO "+addBcImportOrderMethod+" response: " + invokeResult);
             String responseData = "";
             JSONObject zTOResponseBody = new JSONObject(invokeResult);
             Boolean success = (Boolean) zTOResponseBody.get("success");
             if (success) {
                 responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
-                logger.info("ZTO response Decode Data: " + responseData);
+                logger.info("ZTO " + addBcImportOrderMethod + " response Decode Data: " + responseData);
                 JSONObject zTOResponseData = new JSONObject(responseData);
                 logisticsId = (String) zTOResponseData.get("logisticsId");
                 orderId = (String) zTOResponseData.get("orderId");
                 orderNo = (String) zTOResponseData.get("orderNo");
-                //
                 Map<String, Object> ztoQueryBigMarkMap =queryBigMark(ztoImportBcOrder);
-                invokeResult = invokeZto(urlAddress,addBcImportOrderMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
-                logger.info("ZTO response: " + invokeResult);
+                invokeResult = invokeZto(urlAddress,queryBigMarkMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
+                logger.info("ZTO " + queryBigMarkMethod + " response: " + invokeResult);
                 zTOResponseBody = new JSONObject(invokeResult);
                 success = (Boolean) zTOResponseBody.get("success");
                 if (success) {
                     responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
-                    logger.info("ZTO response Decode Data: " + responseData);
+                    logger.info("ZTO " + queryBigMarkMethod + " response Decode Data: " + responseData);
                     extended = (String) zTOResponseData.get("responseData");
                     mark =(String) new JSONObject(responseData).get("mark");
                 }
             }
 
-            if(success) {
+            if(!success) {
                 JSONObject errorBody = new JSONObject(zTOResponseBody.get("error"));
                 if (errorBody != null) {
                     JSONObject zTOResponseError = new JSONObject(errorBody);
@@ -151,7 +149,7 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         long timestamp = System.currentTimeMillis();
         String url = buildUrl(uri, method, appCode, timestamp);
         String encodeData = getEncodeData(secretKey, data, timestamp);
-        logger.info("ZTO url:" + url + "; request encode Data: " + encodeData);
+        logger.info("ZTO request "+method+" : url:" + url  + "; request Data: " + data+ "; encode Data: " + encodeData);
         return HttpUtil.sendPostJson(url, encodeData);
     }
 
@@ -237,20 +235,20 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         // queryBigMark(获取大头笔),客户打印中通电子面单时，需要调用此接口获取大头笔信息，大头笔用于国内运输中转。
         // 收件人地址
         Map<String, Object> ztoReceiverAddressMap = new HashMap<>();
-        ztoReceiverAddressMap.put("consigneeAddress", ztoImportBcOrder.getconsigneeAddress());
-        ztoReceiverAddressMap.put("consigneeCity", ztoImportBcOrder.getconsigneeCity());
-        ztoReceiverAddressMap.put("consigneeDistrict", ztoImportBcOrder.getconsigneeDistrict());
-        ztoReceiverAddressMap.put("consigneeProv", ztoImportBcOrder.getconsigneeProv());
+        ztoReceiverAddressMap.put("address", ztoImportBcOrder.getconsigneeAddress());
+        ztoReceiverAddressMap.put("city", ztoImportBcOrder.getconsigneeCity());
+        ztoReceiverAddressMap.put("district", ztoImportBcOrder.getconsigneeDistrict());
+        ztoReceiverAddressMap.put("province", ztoImportBcOrder.getconsigneeProv());
         // 发件人地址
         Map<String, Object> ztoSenderAddressMap = new HashMap<>();
-        ztoSenderAddressMap.put("shipperAddress", ztoImportBcOrder.getshipperAddress());
-        ztoSenderAddressMap.put("shipperCity", ztoImportBcOrder.getshipperCity());
-        ztoSenderAddressMap.put("shipperDistrict", ztoImportBcOrder.getshipperDistrict());
-        ztoSenderAddressMap.put("shipperProv", ztoImportBcOrder.getshipperProv());
+        ztoSenderAddressMap.put("address", ztoImportBcOrder.getshipperAddress());
+        ztoSenderAddressMap.put("city", ztoImportBcOrder.getshipperCity());
+        ztoSenderAddressMap.put("district", ztoImportBcOrder.getshipperDistrict());
+        ztoSenderAddressMap.put("province", ztoImportBcOrder.getshipperProv());
 
         Map<String, Object> ztoQueryBigMarkMap = new HashMap<>();
-        ztoQueryBigMarkMap.put("receiverAddress", JSONUtil.toJsonStr(ztoReceiverAddressMap));
-        ztoQueryBigMarkMap.put("senderAddress", JSONUtil.toJsonStr(ztoSenderAddressMap));
+        ztoQueryBigMarkMap.put("receiverAddress", ztoReceiverAddressMap);
+        ztoQueryBigMarkMap.put("senderAddress", ztoSenderAddressMap);
         ztoQueryBigMarkMap.put("unionCode", ztoImportBcOrder.getorderId());
 
         return ztoQueryBigMarkMap;
