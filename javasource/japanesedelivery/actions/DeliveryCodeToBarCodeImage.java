@@ -29,13 +29,15 @@ import java.io.InputStream;
 public class DeliveryCodeToBarCodeImage extends CustomJavaAction<IMendixObject>
 {
 	private java.lang.String deliveryNo;
+	private java.lang.String orderNo;
 	private IMendixObject __saveTarget;
 	private japanesedelivery.proxies.BarcodeImageEntity saveTarget;
 
-	public DeliveryCodeToBarCodeImage(IContext context, java.lang.String deliveryNo, IMendixObject saveTarget)
+	public DeliveryCodeToBarCodeImage(IContext context, java.lang.String deliveryNo, java.lang.String orderNo, IMendixObject saveTarget)
 	{
 		super(context);
 		this.deliveryNo = deliveryNo;
+		this.orderNo = orderNo;
 		this.__saveTarget = saveTarget;
 	}
 
