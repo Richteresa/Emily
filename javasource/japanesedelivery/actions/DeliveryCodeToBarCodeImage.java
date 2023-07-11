@@ -21,6 +21,7 @@ import org.jbarcode.paint.EAN13TextPainter;
 import org.jbarcode.paint.WidthCodedPainter;
 import org.jbarcode.util.ImageUtil;
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -93,12 +94,12 @@ public class DeliveryCodeToBarCodeImage extends CustomJavaAction<IMendixObject>
 			// 是否展示文本
 			jbc.setShowText(false);
 			// 设置高度
-			jbc.setBarHeight(17);
+			jbc.setBarHeight(13);
 			// 设置尺寸、大小、密集程度
 			jbc.setXDimension(Double.valueOf(0.45).doubleValue());
 			jbc.setPainter(WidthCodedPainter.getInstance());
 			// 设置宽度比率
-			jbc.setWideRatio(Double.valueOf(30).doubleValue());
+			jbc.setWideRatio(Double.valueOf(25).doubleValue());
 			// 是否检查数字
 			jbc.setCheckDigit(true);
 			// 显示检查数字

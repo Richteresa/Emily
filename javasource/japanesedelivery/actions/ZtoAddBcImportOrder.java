@@ -241,10 +241,10 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         ztoReceiverAddressMap.put("province", ztoImportBcOrder.getconsigneeProv());
         // 发件人地址
         Map<String, Object> ztoSenderAddressMap = new HashMap<>();
-        ztoSenderAddressMap.put("address", ztoImportBcOrder.getshipperAddress());
-        ztoSenderAddressMap.put("city", ztoImportBcOrder.getshipperCity());
-        ztoSenderAddressMap.put("district", ztoImportBcOrder.getshipperDistrict());
-        ztoSenderAddressMap.put("province", ztoImportBcOrder.getshipperProv());
+        ztoSenderAddressMap.put("address", "花山镇启源大道10号中通快递");
+        ztoSenderAddressMap.put("city", "广州市");
+        ztoSenderAddressMap.put("district", "花都区");
+        ztoSenderAddressMap.put("province", "广东省");
 
         Map<String, Object> ztoQueryBigMarkMap = new HashMap<>();
         ztoQueryBigMarkMap.put("receiverAddress", ztoReceiverAddressMap);
