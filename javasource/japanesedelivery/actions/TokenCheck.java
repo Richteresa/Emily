@@ -16,15 +16,17 @@ import org.apache.commons.codec.digest.DigestUtils;
 public class TokenCheck extends CustomJavaAction<java.lang.Boolean>
 {
 	private java.lang.String timestamp;
-	private java.lang.String companyName;
 	private java.lang.String sign;
+	private java.lang.String appCode;
+	private java.lang.String secretKey;
 
-	public TokenCheck(IContext context, java.lang.String timestamp, java.lang.String companyName, java.lang.String sign)
+	public TokenCheck(IContext context, java.lang.String timestamp, java.lang.String sign, java.lang.String appCode, java.lang.String secretKey)
 	{
 		super(context);
 		this.timestamp = timestamp;
-		this.companyName = companyName;
 		this.sign = sign;
+		this.appCode = appCode;
+		this.secretKey = secretKey;
 	}
 
 	@java.lang.Override
@@ -33,9 +35,7 @@ public class TokenCheck extends CustomJavaAction<java.lang.Boolean>
 		// BEGIN USER CODE
 
 		// determine token for Japanese company
-
-		String token = "Japanese_B202302122212_aux6";
-		String shaHex = DigestUtils.shaHex(companyName + timestamp + token);
+		String shaHex = DigestUtils.sha1Hex(appCode + timestamp + secretKey);
 		if(shaHex.equals(sign)){
 			return true;
 		}
