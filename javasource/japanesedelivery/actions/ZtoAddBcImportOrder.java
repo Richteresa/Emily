@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 {
@@ -63,74 +64,79 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		this.ztoOrderEntity = this.__ztoOrderEntity == null ? null : japanesedelivery.proxies.ZtoOrderEntity.initialize(getContext(), __ztoOrderEntity);
 
 		// BEGIN USER CODE
-        Map<String, Object> ztoImportBcOrderMap = addBcImportOrder(ztoImportBcOrder,ztoOrderEntity,ztoIntlOrderItemList);
+        Map<String, Object> ztoImportBcOrderMap = addBcImportOrder(ztoImportBcOrder, ztoOrderEntity, ztoIntlOrderItemList);
         ILogNode logger = Core.getLogger("JapaneseDelivery");
         String secretKey = "7r*cQSA#";
         long timestamp = System.currentTimeMillis();
-        String code = "";
-        String message = "";
-        String messageDetail = "";
-        String logisticsId = "";
-        String orderId = "";
-        String orderNo = "";
+        AtomicReference<String> code = new AtomicReference<>("");
+        AtomicReference<String> message = new AtomicReference<>("");
+        AtomicReference<String> messageDetail = new AtomicReference<>("");
+        AtomicReference<String> logisticsId = new AtomicReference<>("");
+        AtomicReference<String> orderId = new AtomicReference<>("");
+        AtomicReference<String> orderNo = new AtomicReference<>("");
         String extended = "";
-        String mark = "";
+        AtomicReference<String> mark = new AtomicReference<>("");
+        AtomicReference<Boolean> success = null;
 
         // 接口测试地址: https://izop-test.zt-express.com/oms/api
         // 接口生产地址: https://izop.zt-express.com/oms/api
         String urlAddress = "https://izop-test.zt-express.com/oms/api?";
         String addBcImportOrderMethod = "addBcImportOrder";
-        String queryBigMarkMethod = "queryBigMark";
+        // String queryBigMarkMethod = "queryBigMark";
         IMendixObject respVO = Core.instantiate(getContext(), ZtoIntlImportOrderResp.getType());
-        try {
-            String invokeResult = invokeZto(urlAddress,addBcImportOrderMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap));
-            logger.info("ZTO "+addBcImportOrderMethod+" response: " + invokeResult);
-            String responseData = "";
-            JSONObject zTOResponseBody = new JSONObject(invokeResult);
-            Boolean success = (Boolean) zTOResponseBody.get("success");
-            if (success) {
-                responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
-                logger.info("ZTO " + addBcImportOrderMethod + " response Decode Data: " + responseData);
-                JSONObject zTOResponseData = new JSONObject(responseData);
-                logisticsId = (String) zTOResponseData.get("logisticsId");
-                orderId = (String) zTOResponseData.get("orderId");
-                orderNo = (String) zTOResponseData.get("orderNo");
-                mark =(String) zTOResponseData.get("extended");
-//                Map<String, Object> ztoQueryBigMarkMap =queryBigMark(ztoImportBcOrder);
-//                invokeResult = invokeZto(urlAddress,queryBigMarkMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
-//                logger.info("ZTO " + queryBigMarkMethod + " response: " + invokeResult);
-//                zTOResponseBody = new JSONObject(invokeResult);
-//                success = (Boolean) zTOResponseBody.get("success");
-//                if (success) {
-//                    responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
-//                    logger.info("ZTO " + queryBigMarkMethod + " response Decode Data: " + responseData);
-//                    extended = (String) zTOResponseData.get("responseData");
-//                    mark =(String) new JSONObject(responseData).get("mark");
-//                }
-            }
-
-            if(!success) {
-                JSONObject errorBody = new JSONObject(zTOResponseBody.get("error"));
-                if (errorBody != null) {
-                    JSONObject zTOResponseError = new JSONObject(errorBody);
-                    code = (String) zTOResponseError.get("code");
-                    message = (String) zTOResponseError.get("message");
-                    messageDetail = zTOResponseError.get("validationError")+"";
+        new Thread(() -> {
+            try {
+                String invokeResult = invokeZto(urlAddress, addBcImportOrderMethod, "10661", secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap));
+                logger.info("ZTO " + addBcImportOrderMethod + " response: " + invokeResult);
+                String responseData = "";
+                JSONObject zTOResponseBody = new JSONObject(invokeResult);
+                success.set((Boolean) zTOResponseBody.get("success"));
+                if (success.get()) {
+                    responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
+                    logger.info("ZTO " + addBcImportOrderMethod + " response Decode Data: " + responseData);
+                    JSONObject zTOResponseData = new JSONObject(responseData);
+                    logisticsId.set((String) zTOResponseData.get("logisticsId"));
+                    orderId.set((String) zTOResponseData.get("orderId"));
+                    orderNo.set((String) zTOResponseData.get("orderNo"));
+                    mark.set((String) zTOResponseData.get("extended"));
+//                    Map<String, Object> ztoQueryBigMarkMap = queryBigMark(ztoImportBcOrder);
+//                    invokeResult = invokeZto(urlAddress, queryBigMarkMethod, "10661", secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
+//                    logger.info("ZTO " + queryBigMarkMethod + " response: " + invokeResult);
+//                    zTOResponseBody = new JSONObject(invokeResult);
+//                    success = (Boolean) zTOResponseBody.get("success");
+//                    if (success) {
+//                        responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
+//                        logger.info("ZTO " + queryBigMarkMethod + " response Decode Data: " + responseData);
+//                        extended = (String) zTOResponseData.get("responseData");
+//                        mark = (String) new JSONObject(responseData).get("mark");
+//                    }
                 }
+                if (!success.get()) {
+                    JSONObject errorBody = new JSONObject(zTOResponseBody.get("error"));
+                    if (errorBody != null) {
+                        JSONObject zTOResponseError = new JSONObject(errorBody);
+                        code.set((String) zTOResponseError.get("code"));
+                        message.set((String) zTOResponseError.get("message"));
+                        messageDetail.set(zTOResponseError.get("validationError") + "");
+                    }
+                }
+
+            } catch (IOException e) {
+                throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Error while making HTTP request: " + e.getMessage(), e);
+            } catch (Exception e) {
+                throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Abnormal interface of the courier company!");
             }
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.logisticsId), logisticsId);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.orderId), orderId);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.orderNo), orderNo);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.extended), extended);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.mark), mark);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.message), message);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.messageDetail),messageDetail);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.code), code);
-            respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.success), success);
-            return respVO;
-        } catch (Exception e) {
-            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Abnormal interface of the courier company!");
-        }
+        }).start();
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.logisticsId), logisticsId);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.orderId), orderId);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.orderNo), orderNo);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.extended), extended);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.mark), mark);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.message), message);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.messageDetail), messageDetail);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.code), code);
+        respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.success), success);
+        return respVO;
 		// END USER CODE
 	}
 
@@ -145,12 +151,12 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 	}
 
 	// BEGIN EXTRA CODE
-    public String invokeZto(String uri, String method, String appCode,String secretKey,String data) throws Exception {
+    public String invokeZto(String uri, String method, String appCode, String secretKey, String data) throws Exception {
         ILogNode logger = Core.getLogger("JapaneseDelivery");
         long timestamp = System.currentTimeMillis();
         String url = buildUrl(uri, method, appCode, timestamp);
         String encodeData = getEncodeData(secretKey, data, timestamp);
-        logger.info("ZTO request "+method+" : url:" + url  + "; request Data: " + data+ "; encode Data: " + encodeData);
+        logger.info("ZTO request " + method + " : url:" + url + "; request Data: " + data + "; encode Data: " + encodeData);
         return HttpUtil.sendPostJson(url, encodeData);
     }
 
@@ -182,6 +188,15 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 
     private static Map<String, Object> addBcImportOrder(ZtoImportBcOrder ztoImportBcOrder, ZtoOrderEntity ztoOrderEntity, java.util.List<ZtoIntlOrderItem> ztoIntlOrderItemList) throws Exception {
         // addBcImportOrder（创建进口订单-直邮）
+        Map<String, Object> ztoImportBcOrderMap = createImportBcOrderMap(ztoImportBcOrder);
+        Map<String, Object> orderEntityMap = createOrderEntityMap(ztoOrderEntity);
+        ztoImportBcOrderMap.put("orderEntity", orderEntityMap);
+        List<Map<String, Object>> intlOrderItemList2 = createIntlOrderItemList(ztoIntlOrderItemList);
+        ztoImportBcOrderMap.put("intlOrderItemList", intlOrderItemList2);
+        return ztoImportBcOrderMap;
+    }
+
+    private static Map<String, Object> createImportBcOrderMap(ZtoImportBcOrder ztoImportBcOrder) {
         Map<String, Object> ztoImportBcOrderMap = new HashMap<>();
         ztoImportBcOrderMap.put("orderId", ztoImportBcOrder.getorderId());
         ztoImportBcOrderMap.put("consignee", ztoImportBcOrder.getconsignee());
@@ -210,6 +225,10 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         ztoImportBcOrderMap.put("needBigMark", ztoImportBcOrder.getneedBigMark());
         ztoImportBcOrderMap.put("warehouseCode", ztoImportBcOrder.getwarehouseCode());
         ztoImportBcOrderMap.put("weight", ztoImportBcOrder.getweight());
+        return ztoImportBcOrderMap;
+    }
+
+    private static Map<String, Object> createOrderEntityMap(ZtoOrderEntity ztoOrderEntity) {
         Map<String, Object> orderEntityMap = new HashMap<>();
         orderEntityMap.put("payableWeight", ztoOrderEntity.getpayableWeight());
         orderEntityMap.put("remark", ztoOrderEntity.getremark());
@@ -217,43 +236,45 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         orderEntityMap.put("totalShippingFeeUnit", ztoOrderEntity.gettotalShippingFeeUnit());
         orderEntityMap.put("tradeOrderValue", ztoOrderEntity.gettradeOrderValue());
         orderEntityMap.put("tradeOrderValueUnit", ztoOrderEntity.gettradeOrderValueUnit());
-        ztoImportBcOrderMap.put("orderEntity", orderEntityMap);
-        List<Map<String, Object>> intlOrderItemList2 = new ArrayList<>();
+        return orderEntityMap;
+    }
+
+    private static List<Map<String, Object>> createIntlOrderItemList(java.util.List<ZtoIntlOrderItem> ztoIntlOrderItemList) {
+        List<Map<String, Object>> list = new ArrayList<>();
         for (ZtoIntlOrderItem intlOrderItem : ztoIntlOrderItemList) {
-            Map<String, Object> intlOrderItemMap = new HashMap<>();
-            intlOrderItemMap.put("currencyType", intlOrderItem.getcurrencyType());
-            intlOrderItemMap.put("itemId", intlOrderItem.getitemId());
-            intlOrderItemMap.put("itemName", intlOrderItem.getitemName());
-            intlOrderItemMap.put("itemQuantity", intlOrderItem.getitemQuantity());
-            intlOrderItemMap.put("itemUnit", intlOrderItem.getitemUnit());
-            intlOrderItemMap.put("itemUnitPrice", intlOrderItem.getitemUnitPrice());
-            intlOrderItemList2.add(intlOrderItemMap);
+            Map<String, Object> map = createIntlOrderItemMap(intlOrderItem);
+            list.add(map);
         }
-        ztoImportBcOrderMap.put("intlOrderItemList", intlOrderItemList2);
-        return ztoImportBcOrderMap;
+        return list;
+    }
+
+    private static Map<String, Object> createIntlOrderItemMap(ZtoIntlOrderItem intlOrderItem) {
+        Map<String, Object> intlOrderItemMap = new HashMap<>();
+        intlOrderItemMap.put("currencyType", intlOrderItem.getcurrencyType());
+        intlOrderItemMap.put("itemId", intlOrderItem.getitemId());
+        intlOrderItemMap.put("itemName", intlOrderItem.getitemName());
+        intlOrderItemMap.put("itemQuantity", intlOrderItem.getitemQuantity());
+        intlOrderItemMap.put("itemUnit", intlOrderItem.getitemUnit());
+        intlOrderItemMap.put("itemUnitPrice", intlOrderItem.getitemUnitPrice());
+        return intlOrderItemMap;
     }
 
     private static Map<String, Object> queryBigMark(japanesedelivery.proxies.ZtoImportBcOrder ztoImportBcOrder) throws Exception {
         // queryBigMark(获取大头笔),客户打印中通电子面单时，需要调用此接口获取大头笔信息，大头笔用于国内运输中转。
-        // 收件人地址
-        Map<String, Object> ztoReceiverAddressMap = new HashMap<>();
-        ztoReceiverAddressMap.put("address", ztoImportBcOrder.getconsigneeAddress());
-        ztoReceiverAddressMap.put("city", ztoImportBcOrder.getconsigneeCity());
-        ztoReceiverAddressMap.put("district", ztoImportBcOrder.getconsigneeDistrict());
-        ztoReceiverAddressMap.put("province", ztoImportBcOrder.getconsigneeProv());
-        // 发件人地址
-        Map<String, Object> ztoSenderAddressMap = new HashMap<>();
-        ztoSenderAddressMap.put("address", "花山镇启源大道10号中通快递");
-        ztoSenderAddressMap.put("city", "广州市");
-        ztoSenderAddressMap.put("district", "花都区");
-        ztoSenderAddressMap.put("province", "广东省");
-
         Map<String, Object> ztoQueryBigMarkMap = new HashMap<>();
-        ztoQueryBigMarkMap.put("receiverAddress", ztoReceiverAddressMap);
-        ztoQueryBigMarkMap.put("senderAddress", ztoSenderAddressMap);
+        ztoQueryBigMarkMap.put("receiverAddress", createAddressMap(ztoImportBcOrder.getconsigneeAddress(), ztoImportBcOrder.getconsigneeCity(), ztoImportBcOrder.getconsigneeDistrict(), ztoImportBcOrder.getconsigneeProv()));
+        ztoQueryBigMarkMap.put("senderAddress", createAddressMap("花山镇启源大道10号中通快递", "广州市", "花都区", "广东省"));
         ztoQueryBigMarkMap.put("unionCode", ztoImportBcOrder.getorderId());
-
         return ztoQueryBigMarkMap;
+    }
+
+    private static Map<String, Object> createAddressMap(String address, String city, String district, String province) {
+        Map<String, Object> addressMap = new HashMap<>();
+        addressMap.put("address", address);
+        addressMap.put("city", city);
+        addressMap.put("district", district);
+        addressMap.put("province", province);
+        return addressMap;
     }
 	// END EXTRA CODE
 }

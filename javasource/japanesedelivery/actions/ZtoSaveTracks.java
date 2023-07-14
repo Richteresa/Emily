@@ -9,16 +9,26 @@
 
 package japanesedelivery.actions;
 
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
+import com.google.common.collect.Maps;
+import com.zto.intl.common.model.PostBody;
+import com.zto.intl.common.util.DesUtil;
+import com.zto.intl.common.util.HttpInvoke;
+import com.zto.intl.common.util.HttpUtil;
+import com.zto.intl.common.util.MD5;
+import japanesedelivery.proxies.ZtoIntlImportOrderResp;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 {
@@ -40,7 +50,59 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 	public java.lang.Boolean executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-		throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
+		Map<String, Object> ztoSaveTracksMap = saveTracks(action,deliveryTrackNo,tracksMessage, DateUtil.formatDateTime(tracksTime));
+		ILogNode logger = Core.getLogger("JapaneseDelivery");
+		String secretKey = "7r*cQSA#";
+		long timestamp = System.currentTimeMillis();
+		AtomicReference<String> code = new AtomicReference<>("");
+		AtomicReference<String> message = new AtomicReference<>("");
+		AtomicReference<String> messageDetail = new AtomicReference<>("");
+		AtomicReference<String> logisticsId = new AtomicReference<>("");
+		AtomicReference<String> orderId = new AtomicReference<>("");
+		AtomicReference<String> orderNo = new AtomicReference<>("");
+		String extended = "";
+		AtomicReference<String> mark = new AtomicReference<>("");
+		AtomicReference<Boolean> success = null;
+
+		// 接口测试地址: https://izop-test.zt-express.com/oms/api
+		// 接口生产地址: https://izop.zt-express.com/oms/api
+		String urlAddress = "https://izop-test.zt-express.com/oms/api?";
+		String saveTracksMethod = "saveTracks";
+
+		new Thread(() -> {
+			try {
+				String invokeResult = invokeZto(urlAddress,saveTracksMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoSaveTracksMap));
+				logger.info("ZTO "+saveTracksMethod+" response: " + invokeResult);
+				String responseData = "";
+				JSONObject zTOResponseBody = new JSONObject(invokeResult);
+				success.set((Boolean) zTOResponseBody.get("success"));
+				if (success.get()) {
+					responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
+					logger.info("ZTO " + saveTracksMethod + " response Decode Data: " + responseData);
+					JSONObject zTOResponseData = new JSONObject(responseData);
+					logisticsId.set((String) zTOResponseData.get("logisticsId"));
+					orderId.set((String) zTOResponseData.get("orderId"));
+					orderNo.set((String) zTOResponseData.get("orderNo"));
+					mark.set((String) zTOResponseData.get("extended"));
+				}
+				if(!success.get()) {
+					JSONObject errorBody = new JSONObject(zTOResponseBody.get("error"));
+					if (errorBody != null) {
+						JSONObject zTOResponseError = new JSONObject(errorBody);
+						code.set((String) zTOResponseError.get("code"));
+						message.set((String) zTOResponseError.get("message"));
+						messageDetail.set(zTOResponseError.get("validationError") + "");
+					}
+				}
+
+			} catch (IOException e) {
+				throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Error while making HTTP request: " + e.getMessage(), e);
+			} catch (Exception e) {
+				throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Abnormal interface of the courier company!");
+			}
+		}).start();
+
+		return true;
 		// END USER CODE
 	}
 
@@ -55,5 +117,55 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 	}
 
 	// BEGIN EXTRA CODE
+	public String invokeZto(String uri, String method, String appCode,String secretKey,String data) throws Exception {
+		ILogNode logger = Core.getLogger("JapaneseDelivery");
+		long timestamp = System.currentTimeMillis();
+		String url = buildUrl(uri, method, appCode, timestamp);
+		String encodeData = getEncodeData(secretKey, data, timestamp);
+		logger.info("ZTO request "+method+" : url:" + url  + "; request Data: " + data+ "; encode Data: " + encodeData);
+		return HttpUtil.sendPostJson(url, encodeData);
+	}
+
+	private static String buildUrl(String uri, String method, String appCode, Long timestamp) throws IOException {
+		Map<String, Object> map = Maps.newHashMap();
+		map.put("method", method);
+		map.put("timestamp", timestamp);
+		map.put("appCode", appCode);
+		return HttpUtil.buildRealUrl(uri, map, "UTF-8");
+	}
+
+	public static String getEncodeData(String secretKey, String data, long timestamp) throws Exception {
+		String sendData = getSendData(secretKey, data, timestamp);
+		DesUtil desUtil = DesUtil.setDesKey(secretKey);
+		return desUtil.encode(sendData);
+	}
+
+	private static String getSendData(String secretKey, String data, long timestamp) throws Exception {
+		PostBody body = new PostBody();
+		body.setSign(getSign(secretKey, data, timestamp));
+		body.setData(data);
+		return JSONUtil.toJsonStr(body);
+	}
+
+	private static String getSign(String secretKey, String data, long timestamp) throws Exception {
+		String md5Encode = timestamp + secretKey + data;
+		return MD5.MD5Encode(md5Encode);
+	}
+
+	private static Map<String, Object> saveTracks(String action,String mailNo,String message,String time) throws Exception {
+		// saveTracks（ 运单轨迹入库）.运单轨迹明细-入库接口
+		Map<String, Object> ztoSaveTracksMap = new HashMap<>();
+		ztoSaveTracksMap.put("clientSource", "applet.track");
+		ztoSaveTracksMap.put("clientType", "track.save");
+		List<Map<String, Object>> ztoSaveTracksList = new ArrayList<>();
+		Map<String, Object> ztoSaveTracksBodyMap = new HashMap<>();
+		ztoSaveTracksBodyMap.put("action", action);
+		ztoSaveTracksBodyMap.put("mailNo", mailNo);
+		ztoSaveTracksBodyMap.put("message", message);
+		ztoSaveTracksBodyMap.put("time", time); // 格式:yyyy-MM-dd HH:mm:ss
+		ztoSaveTracksList.add(ztoSaveTracksBodyMap);
+		ztoSaveTracksMap.put("data", ztoSaveTracksList);
+		return ztoSaveTracksMap;
+	}
 	// END EXTRA CODE
 }
