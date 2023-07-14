@@ -12,32 +12,28 @@ package japanesedelivery.actions;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import cn.hutool.core.util.StrUtil;
+import com.mendix.core.Core;
+import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
-import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.google.common.collect.Maps;
 import com.zto.intl.common.model.PostBody;
 import com.zto.intl.common.util.DesUtil;
 import com.zto.intl.common.util.HttpInvoke;
 import com.zto.intl.common.util.HttpUtil;
 import com.zto.intl.common.util.MD5;
-import japanesedelivery.proxies.ZtoIntlImportOrderResp;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Date;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.*;
 
 public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 {
 	private java.lang.String deliveryTrackNo;
 	private java.lang.String tracksMessage;
-	private java.util.Date tracksTime;
+	private java.lang.String tracksTime;
 	private java.lang.String action;
 
-	public ZtoSaveTracks(IContext context, java.lang.String deliveryTrackNo, java.lang.String tracksMessage, java.util.Date tracksTime, java.lang.String action)
+	public ZtoSaveTracks(IContext context, java.lang.String deliveryTrackNo, java.lang.String tracksMessage, java.lang.String tracksTime, java.lang.String action)
 	{
 		super(context);
 		this.deliveryTrackNo = deliveryTrackNo;
@@ -50,59 +46,69 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 	public java.lang.Boolean executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-		Map<String, Object> ztoSaveTracksMap = saveTracks(action,deliveryTrackNo,tracksMessage, DateUtil.formatDateTime(tracksTime));
 		ILogNode logger = Core.getLogger("JapaneseDelivery");
+		String formatTimes = tracksTime;
+		logger.info("ZTO formatTimes: " + tracksTime);
+		String actionCode = StrUtil.removePrefix(action, "_");
+		String mailNo = deliveryTrackNo;
+		String mesgInfo= tracksMessage;
 		String secretKey = "7r*cQSA#";
 		long timestamp = System.currentTimeMillis();
-		AtomicReference<String> code = new AtomicReference<>("");
-		AtomicReference<String> message = new AtomicReference<>("");
-		AtomicReference<String> messageDetail = new AtomicReference<>("");
-		AtomicReference<String> logisticsId = new AtomicReference<>("");
-		AtomicReference<String> orderId = new AtomicReference<>("");
-		AtomicReference<String> orderNo = new AtomicReference<>("");
+		String code = "";
+		String message = "";
+		String messageDetail = "";
 		String extended = "";
-		AtomicReference<String> mark = new AtomicReference<>("");
-		AtomicReference<Boolean> success = null;
-
+		Boolean success = false;
 		// 接口测试地址: https://izop-test.zt-express.com/oms/api
 		// 接口生产地址: https://izop.zt-express.com/oms/api
 		String urlAddress = "https://izop-test.zt-express.com/oms/api?";
 		String saveTracksMethod = "saveTracks";
+//		Map<String, Object> ztoSaveTracksMap = saveTracks("150", deliveryTrackNo, tracksMessage, formatTimes);
 
-		new Thread(() -> {
-			try {
-				String invokeResult = invokeZto(urlAddress,saveTracksMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoSaveTracksMap));
-				logger.info("ZTO "+saveTracksMethod+" response: " + invokeResult);
-				String responseData = "";
-				JSONObject zTOResponseBody = new JSONObject(invokeResult);
-				success.set((Boolean) zTOResponseBody.get("success"));
-				if (success.get()) {
-					responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
-					logger.info("ZTO " + saveTracksMethod + " response Decode Data: " + responseData);
-					JSONObject zTOResponseData = new JSONObject(responseData);
-					logisticsId.set((String) zTOResponseData.get("logisticsId"));
-					orderId.set((String) zTOResponseData.get("orderId"));
-					orderNo.set((String) zTOResponseData.get("orderNo"));
-					mark.set((String) zTOResponseData.get("extended"));
-				}
-				if(!success.get()) {
-					JSONObject errorBody = new JSONObject(zTOResponseBody.get("error"));
-					if (errorBody != null) {
-						JSONObject zTOResponseError = new JSONObject(errorBody);
-						code.set((String) zTOResponseError.get("code"));
-						message.set((String) zTOResponseError.get("message"));
-						messageDetail.set(zTOResponseError.get("validationError") + "");
-					}
-				}
+		Map<String, Object> ztoSaveTracksMap = new HashMap<>();
+		ztoSaveTracksMap.put("clientSource", "applet.track");
+		ztoSaveTracksMap.put("clientType", "track.save");
+		List<Map<String, Object>> ztoSaveTracksList = new ArrayList<>();
+		Map<String, Object> ztoSaveTracksBodyMap = new HashMap<>();
+		ztoSaveTracksBodyMap.put("action", actionCode);
+		ztoSaveTracksBodyMap.put("mailNo", mailNo);
+		ztoSaveTracksBodyMap.put("message", mesgInfo);
+		ztoSaveTracksBodyMap.put("time", formatTimes.trim().toString()); // 格式:yyyy-MM-dd HH:mm:ss
+		ztoSaveTracksList.add(ztoSaveTracksBodyMap);
+		ztoSaveTracksMap.put("data", ztoSaveTracksList);
+		String invokeReq = JSONUtil.toJsonStr(ztoSaveTracksMap);
 
-			} catch (IOException e) {
-				throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Error while making HTTP request: " + e.getMessage(), e);
-			} catch (Exception e) {
-				throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Abnormal interface of the courier company!");
+		try {
+			String invokeResult = invokeZto(urlAddress, saveTracksMethod, "10661", secretKey, invokeReq);
+			logger.info("ZTO " + saveTracksMethod + " response: " + invokeResult);
+			String responseData = "";
+			JSONObject zTOResponseBody = new JSONObject(invokeResult);
+			success = (Boolean) zTOResponseBody.get("success");
+			if (success) {
+				responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
+				logger.info("ZTO " + saveTracksMethod + " response Decode Data: " + responseData);
+				JSONObject zTOResponseData = new JSONObject(responseData);
+				code = (String) zTOResponseData.get("code");
+				message = (String) zTOResponseData.get("msg");
+				extended = (String) zTOResponseData.get("data");
 			}
-		}).start();
+			if (!success) {
+				JSONObject errorBody = new JSONObject(zTOResponseBody.get("error"));
+				logger.info("ZTO " + saveTracksMethod + " false, response: " + invokeResult);
+				if (errorBody != null) {
+					JSONObject zTOResponseError = new JSONObject(errorBody);
+					code = ((String) zTOResponseError.get("code"));
+					message = ((String) zTOResponseError.get("message"));
+					messageDetail = (zTOResponseError.get("validationError") + "");
+				}
+			}
+		} catch (IOException e) {
+			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Error while making HTTP request: " + e.getMessage(), e);
+		} catch (Exception e) {
+			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Abnormal interface of the courier company!" + e.getMessage(), e);
+		}
 
-		return true;
+		return success;
 		// END USER CODE
 	}
 
@@ -117,12 +123,12 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 	}
 
 	// BEGIN EXTRA CODE
-	public String invokeZto(String uri, String method, String appCode,String secretKey,String data) throws Exception {
+	public String invokeZto(String uri, String method, String appCode, String secretKey, String data) throws Exception {
 		ILogNode logger = Core.getLogger("JapaneseDelivery");
 		long timestamp = System.currentTimeMillis();
 		String url = buildUrl(uri, method, appCode, timestamp);
 		String encodeData = getEncodeData(secretKey, data, timestamp);
-		logger.info("ZTO request "+method+" : url:" + url  + "; request Data: " + data+ "; encode Data: " + encodeData);
+		logger.info("ZTO request " + method + " : url:" + url + "; request Data: " + data + "; encode Data: " + encodeData);
 		return HttpUtil.sendPostJson(url, encodeData);
 	}
 
@@ -150,22 +156,6 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 	private static String getSign(String secretKey, String data, long timestamp) throws Exception {
 		String md5Encode = timestamp + secretKey + data;
 		return MD5.MD5Encode(md5Encode);
-	}
-
-	private static Map<String, Object> saveTracks(String action,String mailNo,String message,String time) throws Exception {
-		// saveTracks（ 运单轨迹入库）.运单轨迹明细-入库接口
-		Map<String, Object> ztoSaveTracksMap = new HashMap<>();
-		ztoSaveTracksMap.put("clientSource", "applet.track");
-		ztoSaveTracksMap.put("clientType", "track.save");
-		List<Map<String, Object>> ztoSaveTracksList = new ArrayList<>();
-		Map<String, Object> ztoSaveTracksBodyMap = new HashMap<>();
-		ztoSaveTracksBodyMap.put("action", action);
-		ztoSaveTracksBodyMap.put("mailNo", mailNo);
-		ztoSaveTracksBodyMap.put("message", message);
-		ztoSaveTracksBodyMap.put("time", time); // 格式:yyyy-MM-dd HH:mm:ss
-		ztoSaveTracksList.add(ztoSaveTracksBodyMap);
-		ztoSaveTracksMap.put("data", ztoSaveTracksList);
-		return ztoSaveTracksMap;
 	}
 	// END EXTRA CODE
 }
