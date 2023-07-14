@@ -47,51 +47,31 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 	{
 		// BEGIN USER CODE
 		ILogNode logger = Core.getLogger("JapaneseDelivery");
-		String formatTimes = tracksTime;
-		logger.info("ZTO formatTimes: " + tracksTime);
-		String actionCode = StrUtil.removePrefix(action, "_");
-		String mailNo = deliveryTrackNo;
-		String mesgInfo= tracksMessage;
 		String secretKey = "7r*cQSA#";
-		long timestamp = System.currentTimeMillis();
 		String code = "";
 		String message = "";
-		String messageDetail = "";
-		String extended = "";
 		Boolean success = false;
 		// 接口测试地址: https://izop-test.zt-express.com/oms/api
 		// 接口生产地址: https://izop.zt-express.com/oms/api
 		String urlAddress = "https://izop-test.zt-express.com/oms/api?";
 		String saveTracksMethod = "saveTracks";
-//		Map<String, Object> ztoSaveTracksMap = saveTracks("150", deliveryTrackNo, tracksMessage, formatTimes);
-
 		Map<String, Object> ztoSaveTracksMap = new HashMap<>();
 		ztoSaveTracksMap.put("clientSource", "applet.track");
 		ztoSaveTracksMap.put("clientType", "track.save");
 		List<Map<String, Object>> ztoSaveTracksList = new ArrayList<>();
 		Map<String, Object> ztoSaveTracksBodyMap = new HashMap<>();
-		ztoSaveTracksBodyMap.put("action", actionCode);
-		ztoSaveTracksBodyMap.put("mailNo", mailNo);
-		ztoSaveTracksBodyMap.put("message", mesgInfo);
-		ztoSaveTracksBodyMap.put("time", formatTimes.trim().toString()); // 格式:yyyy-MM-dd HH:mm:ss
+		ztoSaveTracksBodyMap.put("action", StrUtil.removePrefix(action, "_"));
+		ztoSaveTracksBodyMap.put("mailNo", deliveryTrackNo);
+		ztoSaveTracksBodyMap.put("message", tracksMessage);
+		ztoSaveTracksBodyMap.put("time", tracksTime); // 格式:yyyy-MM-dd HH:mm:ss
 		ztoSaveTracksList.add(ztoSaveTracksBodyMap);
 		ztoSaveTracksMap.put("data", ztoSaveTracksList);
 		String invokeReq = JSONUtil.toJsonStr(ztoSaveTracksMap);
-
 		try {
 			String invokeResult = invokeZto(urlAddress, saveTracksMethod, "10661", secretKey, invokeReq);
 			logger.info("ZTO " + saveTracksMethod + " response: " + invokeResult);
-			String responseData = "";
 			JSONObject zTOResponseBody = new JSONObject(invokeResult);
 			success = (Boolean) zTOResponseBody.get("success");
-			if (success) {
-				responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
-				logger.info("ZTO " + saveTracksMethod + " response Decode Data: " + responseData);
-				JSONObject zTOResponseData = new JSONObject(responseData);
-				code = (String) zTOResponseData.get("code");
-				message = (String) zTOResponseData.get("msg");
-				extended = (String) zTOResponseData.get("data");
-			}
 			if (!success) {
 				JSONObject errorBody = new JSONObject(zTOResponseBody.get("error"));
 				logger.info("ZTO " + saveTracksMethod + " false, response: " + invokeResult);
@@ -99,7 +79,6 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 					JSONObject zTOResponseError = new JSONObject(errorBody);
 					code = ((String) zTOResponseError.get("code"));
 					message = ((String) zTOResponseError.get("message"));
-					messageDetail = (zTOResponseError.get("validationError") + "");
 				}
 			}
 		} catch (IOException e) {
@@ -107,7 +86,6 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 		} catch (Exception e) {
 			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Abnormal interface of the courier company!" + e.getMessage(), e);
 		}
-
 		return success;
 		// END USER CODE
 	}
