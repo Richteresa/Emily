@@ -95,17 +95,18 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
                 logisticsId = (String) zTOResponseData.get("logisticsId");
                 orderId = (String) zTOResponseData.get("orderId");
                 orderNo = (String) zTOResponseData.get("orderNo");
-                Map<String, Object> ztoQueryBigMarkMap =queryBigMark(ztoImportBcOrder);
-                invokeResult = invokeZto(urlAddress,queryBigMarkMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
-                logger.info("ZTO " + queryBigMarkMethod + " response: " + invokeResult);
-                zTOResponseBody = new JSONObject(invokeResult);
-                success = (Boolean) zTOResponseBody.get("success");
-                if (success) {
-                    responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
-                    logger.info("ZTO " + queryBigMarkMethod + " response Decode Data: " + responseData);
-                    extended = (String) zTOResponseData.get("responseData");
-                    mark =(String) new JSONObject(responseData).get("mark");
-                }
+                mark =(String) zTOResponseData.get("extended");
+//                Map<String, Object> ztoQueryBigMarkMap =queryBigMark(ztoImportBcOrder);
+//                invokeResult = invokeZto(urlAddress,queryBigMarkMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
+//                logger.info("ZTO " + queryBigMarkMethod + " response: " + invokeResult);
+//                zTOResponseBody = new JSONObject(invokeResult);
+//                success = (Boolean) zTOResponseBody.get("success");
+//                if (success) {
+//                    responseData = HttpInvoke.getDecodeData(secretKey, (String) zTOResponseBody.get("data"));
+//                    logger.info("ZTO " + queryBigMarkMethod + " response Decode Data: " + responseData);
+//                    extended = (String) zTOResponseData.get("responseData");
+//                    mark =(String) new JSONObject(responseData).get("mark");
+//                }
             }
 
             if(!success) {
@@ -196,7 +197,7 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         ztoImportBcOrderMap.put("idType", ztoImportBcOrder.getidType());
         ztoImportBcOrderMap.put("ieType", ztoImportBcOrder.getieType());
         ztoImportBcOrderMap.put("netWeight", ztoImportBcOrder.getnetWeight());
-        ztoImportBcOrderMap.put("platformSource", "10661");
+        ztoImportBcOrderMap.put("platformSource", ztoImportBcOrder.getplatformSource());
         ztoImportBcOrderMap.put("shipType", ztoImportBcOrder.getshipType());
         ztoImportBcOrderMap.put("shipper", ztoImportBcOrder.getshipper());
         ztoImportBcOrderMap.put("shipperAddress", ztoImportBcOrder.getshipperAddress());
@@ -206,7 +207,8 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         ztoImportBcOrderMap.put("shipperMobile", ztoImportBcOrder.getshipperMobile());
         ztoImportBcOrderMap.put("shipperProv", ztoImportBcOrder.getshipperProv());
         ztoImportBcOrderMap.put("stockFlag", ztoImportBcOrder.getstockFlag());
-        ztoImportBcOrderMap.put("warehouseCode", "au001");
+        ztoImportBcOrderMap.put("needBigMark", ztoImportBcOrder.getneedBigMark());
+        ztoImportBcOrderMap.put("warehouseCode", ztoImportBcOrder.getwarehouseCode());
         ztoImportBcOrderMap.put("weight", ztoImportBcOrder.getweight());
         Map<String, Object> orderEntityMap = new HashMap<>();
         orderEntityMap.put("payableWeight", ztoOrderEntity.getpayableWeight());
