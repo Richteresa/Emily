@@ -188,5 +188,6 @@
     <orderEntry type="library" name="userlib" level="project" />
     <orderEntry type="library" name="pdfbox-2.0.24" level="project" />
     <orderEntry type="library" name="hutool-all-5.8.16" level="project" />
+    <orderEntry type="library" name="zto-intl-common-0.0.1-SNAPSHOT" level="project" />
   </component>
 </module>
