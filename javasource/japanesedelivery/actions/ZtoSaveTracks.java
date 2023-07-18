@@ -25,6 +25,7 @@ import com.zto.intl.common.util.HttpUtil;
 import com.zto.intl.common.util.MD5;
 import java.io.IOException;
 import java.util.*;
+import com.mendix.systemwideinterfaces.core.IMendixObject;
 
 public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 {
@@ -32,32 +33,37 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 	private java.lang.String tracksMessage;
 	private java.lang.String tracksTime;
 	private java.lang.String action;
+	private IMendixObject __channelConfig;
+	private japanesedelivery.proxies.ChannelConfig channelConfig;
 
-	public ZtoSaveTracks(IContext context, java.lang.String deliveryTrackNo, java.lang.String tracksMessage, java.lang.String tracksTime, java.lang.String action)
+	public ZtoSaveTracks(IContext context, java.lang.String deliveryTrackNo, java.lang.String tracksMessage, java.lang.String tracksTime, java.lang.String action, IMendixObject channelConfig)
 	{
 		super(context);
 		this.deliveryTrackNo = deliveryTrackNo;
 		this.tracksMessage = tracksMessage;
 		this.tracksTime = tracksTime;
 		this.action = action;
+		this.__channelConfig = channelConfig;
 	}
 
 	@java.lang.Override
 	public java.lang.Boolean executeAction() throws Exception
 	{
+		this.channelConfig = this.__channelConfig == null ? null : japanesedelivery.proxies.ChannelConfig.initialize(getContext(), __channelConfig);
+
 		// BEGIN USER CODE
 		ILogNode logger = Core.getLogger("JapaneseDelivery");
-		String secretKey = "7r*cQSA#";
+		String secretKey = channelConfig.getsecretKey();
 		String code = "";
 		String message = "";
 		Boolean success = false;
 		// 接口测试地址: https://izop-test.zt-express.com/oms/api
 		// 接口生产地址: https://izop.zt-express.com/oms/api
-		String urlAddress = "https://izop-test.zt-express.com/oms/api?";
+		String urlAddress = channelConfig.geturlAddress();
 		String saveTracksMethod = "saveTracks";
 		Map<String, Object> ztoSaveTracksMap = new HashMap<>();
-		ztoSaveTracksMap.put("clientSource", "applet.track");
-		ztoSaveTracksMap.put("clientType", "track.save");
+		ztoSaveTracksMap.put("clientSource", channelConfig.getclientSource());
+		ztoSaveTracksMap.put("clientType", channelConfig.getclientType());
 		List<Map<String, Object>> ztoSaveTracksList = new ArrayList<>();
 		Map<String, Object> ztoSaveTracksBodyMap = new HashMap<>();
 		ztoSaveTracksBodyMap.put("action", StrUtil.removePrefix(action, "_"));
@@ -68,7 +74,7 @@ public class ZtoSaveTracks extends CustomJavaAction<java.lang.Boolean>
 		ztoSaveTracksMap.put("data", ztoSaveTracksList);
 		String invokeReq = JSONUtil.toJsonStr(ztoSaveTracksMap);
 		try {
-			String invokeResult = invokeZto(urlAddress, saveTracksMethod, "10661", secretKey, invokeReq);
+			String invokeResult = invokeZto(urlAddress, saveTracksMethod, channelConfig.getappCode(), secretKey, invokeReq);
 			logger.info("ZTO " + saveTracksMethod + " response: " + invokeResult);
 			JSONObject zTOResponseBody = new JSONObject(invokeResult);
 			success = (Boolean) zTOResponseBody.get("success");

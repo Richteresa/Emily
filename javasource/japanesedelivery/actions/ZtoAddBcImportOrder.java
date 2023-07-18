@@ -40,13 +40,16 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 	private java.util.List<japanesedelivery.proxies.ZtoIntlOrderItem> ztoIntlOrderItemList;
 	private IMendixObject __ztoOrderEntity;
 	private japanesedelivery.proxies.ZtoOrderEntity ztoOrderEntity;
+	private IMendixObject __channelConfig;
+	private japanesedelivery.proxies.ChannelConfig channelConfig;
 
-	public ZtoAddBcImportOrder(IContext context, IMendixObject ztoImportBcOrder, java.util.List<IMendixObject> ztoIntlOrderItemList, IMendixObject ztoOrderEntity)
+	public ZtoAddBcImportOrder(IContext context, IMendixObject ztoImportBcOrder, java.util.List<IMendixObject> ztoIntlOrderItemList, IMendixObject ztoOrderEntity, IMendixObject channelConfig)
 	{
 		super(context);
 		this.__ztoImportBcOrder = ztoImportBcOrder;
 		this.__ztoIntlOrderItemList = ztoIntlOrderItemList;
 		this.__ztoOrderEntity = ztoOrderEntity;
+		this.__channelConfig = channelConfig;
 	}
 
 	@java.lang.Override
@@ -62,10 +65,12 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 
 		this.ztoOrderEntity = this.__ztoOrderEntity == null ? null : japanesedelivery.proxies.ZtoOrderEntity.initialize(getContext(), __ztoOrderEntity);
 
+		this.channelConfig = this.__channelConfig == null ? null : japanesedelivery.proxies.ChannelConfig.initialize(getContext(), __channelConfig);
+
 		// BEGIN USER CODE
         Map<String, Object> ztoImportBcOrderMap = addBcImportOrder(ztoImportBcOrder,ztoOrderEntity,ztoIntlOrderItemList);
         ILogNode logger = Core.getLogger("JapaneseDelivery");
-        String secretKey = "7r*cQSA#";
+        String secretKey = channelConfig.getsecretKey();
 
         String code = "";
         String message = "";
@@ -78,12 +83,12 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 
         // 接口测试地址: https://izop-test.zt-express.com/oms/api
         // 接口生产地址: https://izop.zt-express.com/oms/api
-        String urlAddress = "https://izop-test.zt-express.com/oms/api?";
+        String urlAddress = channelConfig.geturlAddress();
         String addBcImportOrderMethod = "addBcImportOrder";
         // String queryBigMarkMethod = "queryBigMark";
         IMendixObject respVO = Core.instantiate(getContext(), ZtoIntlImportOrderResp.getType());
         try {
-            String invokeResult = invokeZto(urlAddress,addBcImportOrderMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap));
+            String invokeResult = invokeZto(urlAddress,addBcImportOrderMethod,channelConfig.getappCode(),secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap));
             logger.info("ZTO "+addBcImportOrderMethod+" response: " + invokeResult);
             String responseData = "";
             JSONObject zTOResponseBody = new JSONObject(invokeResult);
@@ -97,7 +102,7 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
                 orderNo = (String) zTOResponseData.get("orderNo");
                 mark =(String) zTOResponseData.get("extended");
 //                Map<String, Object> ztoQueryBigMarkMap =queryBigMark(ztoImportBcOrder);
-//                invokeResult = invokeZto(urlAddress,queryBigMarkMethod,"10661",secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
+//                invokeResult = invokeZto(urlAddress,queryBigMarkMethod,channelConfig.getappCode(),secretKey, JSONUtil.toJsonStr(ztoQueryBigMarkMap));
 //                logger.info("ZTO " + queryBigMarkMethod + " response: " + invokeResult);
 //                zTOResponseBody = new JSONObject(invokeResult);
 //                success = (Boolean) zTOResponseBody.get("success");
