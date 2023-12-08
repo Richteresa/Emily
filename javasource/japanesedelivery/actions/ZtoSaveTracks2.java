@@ -69,7 +69,11 @@ public class ZtoSaveTracks2 extends CustomJavaAction<IMendixObject>
 		ztoSaveTracksMap.put("clientType", channelConfig.getclientType());
 		List<Map<String, Object>> ztoSaveTracksList = new ArrayList<>();
 		Map<String, Object> ztoSaveTracksBodyMap = new HashMap<>();
-		ztoSaveTracksBodyMap.put("action", StrUtil.removePrefix(action, "_"));
+		action = StrUtil.removePrefix(action, "_");
+        if (action.equals("1015")) {
+            action = "-1015";
+        }
+		ztoSaveTracksBodyMap.put("action", action);
 		ztoSaveTracksBodyMap.put("mailNo", deliveryTrackNo);
 		ztoSaveTracksBodyMap.put("message", tracksMessage);
 		ztoSaveTracksBodyMap.put("time", tracksTime); // 格式:yyyy-MM-dd HH:mm:ss
