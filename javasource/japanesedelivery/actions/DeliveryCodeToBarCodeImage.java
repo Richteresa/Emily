@@ -48,16 +48,21 @@ public class DeliveryCodeToBarCodeImage extends CustomJavaAction<IMendixObject>
 		this.saveTarget = this.__saveTarget == null ? null : japanesedelivery.proxies.BarcodeImageEntity.initialize(getContext(), __saveTarget);
 
 		// BEGIN USER CODE
-		BufferedImage image = getJbarcode().createBarcode(deliveryNo);
+        // 检查deliveryNo是否为空或null
+        if (deliveryNo == null || deliveryNo.trim().isEmpty()) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Delivery number cannot be empty or null");
+        }
+        
+        BufferedImage image = getJbarcode().createBarcode(deliveryNo);
 
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		ImageIO.write(image, "jpg", outputStream);
-		InputStream in = new ByteArrayInputStream(outputStream.toByteArray());
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", outputStream);
+        InputStream in = new ByteArrayInputStream(outputStream.toByteArray());
 
 
-		Core.storeImageDocumentContent(this.getContext(), __saveTarget, in, 100 ,150);
+        Core.storeImageDocumentContent(this.getContext(), __saveTarget, in, 100 ,150);
 
-		return __saveTarget;
+        return __saveTarget;
 		// END USER CODE
 	}
 

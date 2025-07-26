@@ -68,9 +68,31 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 		this.channelConfig = this.__channelConfig == null ? null : japanesedelivery.proxies.ChannelConfig.initialize(getContext(), __channelConfig);
 
 		// BEGIN USER CODE
-        Map<String, Object> ztoImportBcOrderMap = addBcImportOrder(ztoImportBcOrder,ztoOrderEntity,ztoIntlOrderItemList);
         ILogNode logger = Core.getLogger("JapaneseDelivery");
+        
+        // 检查必要的参数
+        if (channelConfig == null) {
+            logger.error("ChannelConfig is null");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel configuration is missing!");
+        }
+        
+        if (ztoImportBcOrder == null) {
+            logger.error("ZtoImportBcOrder is null");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Import order data is missing!");
+        }
+        
+        if (ztoOrderEntity == null) {
+            logger.error("ZtoOrderEntity is null");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Order entity data is missing!");
+        }
+        
+        Map<String, Object> ztoImportBcOrderMap = addBcImportOrder(ztoImportBcOrder,ztoOrderEntity,ztoIntlOrderItemList);
         String secretKey = channelConfig.getsecretKey();
+        
+        if (secretKey == null || secretKey.trim().isEmpty()) {
+            logger.error("SecretKey is null or empty");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel secret key is missing!");
+        }
 
         String code = "";
         String message = "";
@@ -84,11 +106,21 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
         // 接口测试地址: https://izop-test.zt-express.com/oms/api
         // 接口生产地址: https://izop.zt-express.com/oms/api
         String urlAddress = channelConfig.geturlAddress();
+        if (urlAddress == null || urlAddress.trim().isEmpty()) {
+            logger.error("URL address is null or empty");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel URL address is missing!");
+        }
+        
+        String appCode = channelConfig.getappCode();
+        if (appCode == null || appCode.trim().isEmpty()) {
+            logger.error("AppCode is null or empty");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel app code is missing!");
+        }
         String addBcImportOrderMethod = "addBcImportOrder";
         // String queryBigMarkMethod = "queryBigMark";
         IMendixObject respVO = Core.instantiate(getContext(), ZtoIntlImportOrderResp.getType());
         try {
-            String invokeResult = invokeZto(urlAddress,addBcImportOrderMethod,channelConfig.getappCode(),secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap));
+            String invokeResult = invokeZto(urlAddress,addBcImportOrderMethod,appCode,secretKey, JSONUtil.toJsonStr(ztoImportBcOrderMap));
             logger.info("ZTO "+addBcImportOrderMethod+" response: " + invokeResult);
             String responseData = "";
             JSONObject zTOResponseBody = new JSONObject(invokeResult);
@@ -187,6 +219,13 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 
     private static Map<String, Object> addBcImportOrder(ZtoImportBcOrder ztoImportBcOrder, ZtoOrderEntity ztoOrderEntity, java.util.List<ZtoIntlOrderItem> ztoIntlOrderItemList) throws Exception {
         // addBcImportOrder（创建进口订单-直邮）
+        if (ztoImportBcOrder == null) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("ZtoImportBcOrder cannot be null");
+        }
+        if (ztoOrderEntity == null) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("ZtoOrderEntity cannot be null");
+        }
+        
         Map<String, Object> ztoImportBcOrderMap = createImportBcOrderMap(ztoImportBcOrder);
         Map<String, Object> orderEntityMap = createOrderEntityMap(ztoOrderEntity);
         ztoImportBcOrderMap.put("orderEntity", orderEntityMap);
@@ -196,6 +235,9 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
     }
 
     private static Map<String, Object> createImportBcOrderMap(ZtoImportBcOrder ztoImportBcOrder) {
+        if (ztoImportBcOrder == null) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("ZtoImportBcOrder cannot be null");
+        }
         Map<String, Object> ztoImportBcOrderMap = new HashMap<>();
         ztoImportBcOrderMap.put("orderId", ztoImportBcOrder.getorderId());
         ztoImportBcOrderMap.put("consignee", ztoImportBcOrder.getconsignee());
@@ -228,6 +270,9 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
     }
 
     private static Map<String, Object> createOrderEntityMap(ZtoOrderEntity ztoOrderEntity) {
+        if (ztoOrderEntity == null) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("ZtoOrderEntity cannot be null");
+        }
         Map<String, Object> orderEntityMap = new HashMap<>();
         orderEntityMap.put("payableWeight", ztoOrderEntity.getpayableWeight());
         orderEntityMap.put("remark", ztoOrderEntity.getremark());
@@ -240,14 +285,21 @@ public class ZtoAddBcImportOrder extends CustomJavaAction<IMendixObject>
 
     private static List<Map<String, Object>> createIntlOrderItemList(java.util.List<ZtoIntlOrderItem> ztoIntlOrderItemList) {
         List<Map<String, Object>> list = new ArrayList<>();
-        for (ZtoIntlOrderItem intlOrderItem : ztoIntlOrderItemList) {
-            Map<String, Object> map = createIntlOrderItemMap(intlOrderItem);
-            list.add(map);
+        if (ztoIntlOrderItemList != null) {
+            for (ZtoIntlOrderItem intlOrderItem : ztoIntlOrderItemList) {
+                if (intlOrderItem != null) {
+                    Map<String, Object> map = createIntlOrderItemMap(intlOrderItem);
+                    list.add(map);
+                }
+            }
         }
         return list;
     }
 
     private static Map<String, Object> createIntlOrderItemMap(ZtoIntlOrderItem intlOrderItem) {
+        if (intlOrderItem == null) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("ZtoIntlOrderItem cannot be null");
+        }
         Map<String, Object> intlOrderItemMap = new HashMap<>();
         intlOrderItemMap.put("currencyType", intlOrderItem.getcurrencyType());
         intlOrderItemMap.put("itemId", intlOrderItem.getitemId());

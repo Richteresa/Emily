@@ -16,7 +16,6 @@ import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.webui.CustomJavaAction;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.core.Core;
-
 import japanesedelivery.proxies.ZtoImportBcOrder;
 import japanesedelivery.proxies.ZtoIntlImportOrderResp;
 import japanesedelivery.proxies.ZtoIntlOrderItem;
@@ -35,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.math.BigDecimal;
 
 public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
 {
@@ -72,10 +72,37 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
 		this.channelConfig = this.__channelConfig == null ? null : japanesedelivery.proxies.ChannelConfig.initialize(getContext(), __channelConfig);
 
 		// BEGIN USER CODE
-        Map<String, Object> orderParams = createQunhuiOrderParams(ztoImportBcOrder, ztoOrderEntity, ztoIntlOrderItemList);
         ILogNode logger = Core.getLogger("JapaneseDelivery");
+        
+        // 检查必要的参数
+        if (channelConfig == null) {
+            logger.error("ChannelConfig is null");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel configuration is missing!");
+        }
+        
+        if (ztoImportBcOrder == null) {
+            logger.error("ZtoImportBcOrder is null");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Import order data is missing!");
+        }
+        
+        if (ztoOrderEntity == null) {
+            logger.error("ZtoOrderEntity is null");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Order entity data is missing!");
+        }
+        
+        Map<String, Object> orderParams = createQunhuiOrderParams(ztoImportBcOrder, ztoOrderEntity, ztoIntlOrderItemList);
         String secretKey = channelConfig.getsecretKey();
         String appKey = channelConfig.getappCode();
+        
+        if (secretKey == null || secretKey.trim().isEmpty()) {
+            logger.error("SecretKey is null or empty");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel secret key is missing!");
+        }
+        
+        if (appKey == null || appKey.trim().isEmpty()) {
+            logger.error("AppKey is null or empty");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel app key is missing!");
+        }
 
         String code = "";
         String message = "";
@@ -88,6 +115,10 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
 
         // 群辉接口地址
         String urlAddress = channelConfig.geturlAddress();
+        if (urlAddress == null || urlAddress.trim().isEmpty()) {
+            logger.error("URL address is null or empty");
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Channel URL address is missing!");
+        }
         String apiPath = "/qh-ocenter-api-web/api/expressorder/expressno";
         IMendixObject respVO = Core.instantiate(getContext(), ZtoIntlImportOrderResp.getType());
         try {
@@ -107,6 +138,9 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
                     mark = (String) data.get("twoDimensionCode");
                     extended = (String) data.get("printUrl");
                 }
+                // 即使订单已存在，也设置消息信息
+                message = (String) responseBody.get("msg");
+                messageDetail = message;
             } else {
                 code = String.valueOf(responseCode);
                 message = (String) responseBody.get("msg");
@@ -151,8 +185,15 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
         // 生成签名
         String sign = generateSign(params, secretKey);
         
-        // 构建请求体
-        String requestBody = com.alibaba.fastjson.JSONObject.toJSONString(params, SerializerFeature.MapSortField);
+        // 构建请求体 - 移除null值
+        Map<String, Object> filteredParams = new HashMap<>();
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            if (entry.getValue() != null) {
+                filteredParams.put(entry.getKey(), entry.getValue());
+            }
+        }
+        String requestBody = com.alibaba.fastjson.JSONObject.toJSONString(filteredParams, 
+            SerializerFeature.MapSortField);
         
         logger.info("Qunhui request: url=" + url + "; params=" + requestBody + "; sign=" + sign);
         
@@ -167,75 +208,138 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                 .build();
         
+        logger.info("Request headers: app_key=" + appKey + ", sign=" + sign + ", timestamp=" + timestamp);
+        String jsonForSign = com.alibaba.fastjson.JSONObject.toJSONString(filteredParams, 
+            SerializerFeature.MapSortField);
+        logger.info("Request body for sign generation: " + jsonForSign);
+        logger.info("Sign generation string: " + secretKey + jsonForSign + secretKey);
+        logger.info("Generated sign: " + sign);
+        logger.info("Secret key length: " + secretKey.length());
+        logger.info("JSON string length: " + jsonForSign.length());
+        
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         return response.body();
     }
     
     private String generateSign(Map<String, Object> params, String secretKey) throws Exception {
-        // 使用TreeMap自动按ASCII码排序
-        TreeMap<String, Object> sortedParams = new TreeMap<>();
+        // 移除null值的参数
+        Map<String, Object> filteredParams = new HashMap<>();
         for (Map.Entry<String, Object> entry : params.entrySet()) {
-            // 忽略null值
             if (entry.getValue() != null) {
-                sortedParams.put(entry.getKey(), entry.getValue());
+                filteredParams.put(entry.getKey(), entry.getValue());
             }
         }
         
-        // 转换为JSON字符串
-        String jsonString = com.alibaba.fastjson.JSONObject.toJSONString(sortedParams, SerializerFeature.MapSortField);
+        // 按照API文档要求，使用fastjson的SerializerFeature.MapSortField进行ASCII码排序
+        String jsonString = com.alibaba.fastjson.JSONObject.toJSONString(filteredParams, 
+            SerializerFeature.MapSortField);
         
         // 生成MD5签名: md5(密钥+JsonString+密钥)
         String signData = secretKey + jsonString + secretKey;
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        byte[] digest = md.digest(signData.getBytes(StandardCharsets.UTF_8));
         
-        // 转换为32位大写字符串
-        StringBuilder sb = new StringBuilder();
-        for (byte b : digest) {
-            sb.append(String.format("%02X", b));
+        // 使用与参考代码相同的MD5加密方式
+        byte[] digest = encryptMD5(signData);
+        
+        // 按照对方提供的参考代码转换为32位大写字符串
+        return byte2hex(digest);
+    }
+    
+    private byte[] encryptMD5(String data) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            return md.digest(data.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new RuntimeException("MD5 encryption failed", e);
         }
-        return sb.toString();
+    }
+    
+    private String byte2hex(byte[] bytes) {
+        StringBuilder sign = new StringBuilder();
+        for (byte aByte : bytes) {
+            String hex = Integer.toHexString(aByte & 0xFF);
+            if (hex.length() == 1) {
+                sign.append("0");
+            }
+            sign.append(hex.toUpperCase());
+        }
+        return sign.toString();
     }
 
     private static Map<String, Object> createQunhuiOrderParams(ZtoImportBcOrder ztoImportBcOrder, ZtoOrderEntity ztoOrderEntity, java.util.List<ZtoIntlOrderItem> ztoIntlOrderItemList) throws Exception {
         // 创建群辉API参数
         Map<String, Object> params = new HashMap<>();
         
+        // 检查必要参数
+        if (ztoImportBcOrder == null) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("ZtoImportBcOrder cannot be null");
+        }
+        
+        if (ztoOrderEntity == null) {
+            throw new com.mendix.systemwideinterfaces.MendixRuntimeException("ZtoOrderEntity cannot be null");
+        }
+        
         // 基本订单信息
         params.put("cusOrderNo", ztoImportBcOrder.getorderId());
-        params.put("orderType", "1"); // 订单类型，默认为1
+        params.put("expressServerType", "GNQG"); // 快递业务类型，必填，使用字符串
+        params.put("expressSupplier", "ZTO"); // 快递商代码，必填
         
-        // 发件人信息
-        params.put("senderName", ztoImportBcOrder.getshipper());
-        params.put("senderPhone", ztoImportBcOrder.getshipperMobile());
+        // 发件人信息 - 使用API要求的字段名
+        params.put("sender", ztoImportBcOrder.getshipper());
+        params.put("senderTel", ztoImportBcOrder.getshipperMobile());
         params.put("senderProvince", ztoImportBcOrder.getshipperProv());
         params.put("senderCity", ztoImportBcOrder.getshipperCity());
-        params.put("senderArea", ztoImportBcOrder.getshipperDistrict());
+        params.put("senderCounty", ztoImportBcOrder.getshipperDistrict());
         params.put("senderAddress", ztoImportBcOrder.getshipperAddress());
+        params.put("senderCountry", "JP"); // 发件人国别代码，必填
         
-        // 收件人信息
-        params.put("receiverName", ztoImportBcOrder.getconsignee());
-        params.put("receiverPhone", ztoImportBcOrder.getconsigneeMobile());
-        params.put("receiverProvince", ztoImportBcOrder.getconsigneeProv());
-        params.put("receiverCity", ztoImportBcOrder.getconsigneeCity());
-        params.put("receiverArea", ztoImportBcOrder.getconsigneeDistrict());
-        params.put("receiverAddress", ztoImportBcOrder.getconsigneeAddress());
+        // 收件人信息 - 使用API要求的字段名
+        params.put("consignee", ztoImportBcOrder.getconsignee());
+        params.put("consigneeTel", ztoImportBcOrder.getconsigneeMobile());
+        params.put("consigneeProvince", ztoImportBcOrder.getconsigneeProv());
+        params.put("consigneeCity", ztoImportBcOrder.getconsigneeCity());
+        params.put("consigneeCounty", ztoImportBcOrder.getconsigneeDistrict());
+        params.put("consigneeAddress", ztoImportBcOrder.getconsigneeAddress());
+        params.put("consigneeCountry", "CN"); // 收件人国别代码，必填
         
-        // 包裹信息
-        params.put("weight", ztoImportBcOrder.getweight());
-        params.put("remark", ztoOrderEntity.getremark());
-        
-        // 商品信息
-        List<Map<String, Object>> goodsList = new ArrayList<>();
-        for (ZtoIntlOrderItem item : ztoIntlOrderItemList) {
-            Map<String, Object> goods = new HashMap<>();
-            goods.put("goodsName", item.getitemName());
-            goods.put("goodsQuantity", item.getitemQuantity());
-            goods.put("goodsPrice", item.getitemUnitPrice());
-            goods.put("goodsWeight", 0.1); // 默认重量
-            goodsList.add(goods);
+        // 包裹信息 - 确保重量格式与对方一致
+        BigDecimal weight = ztoImportBcOrder.getweight();
+        if (weight != null) {
+            // 使用stripTrailingZeros()去除尾随零，确保格式与对方一致
+            params.put("packageWeight", weight.stripTrailingZeros());
         }
-        params.put("goodsList", goodsList);
+        // 注意：不添加remark字段，因为对方的签名中没有包含此字段
+        
+        // 商品信息 - 使用API要求的字段名orderItems
+        List<Map<String, Object>> orderItems = new ArrayList<>();
+        if (ztoIntlOrderItemList != null && !ztoIntlOrderItemList.isEmpty()) {
+            for (ZtoIntlOrderItem item : ztoIntlOrderItemList) {
+                if (item != null) {
+                    Map<String, Object> orderItem = new HashMap<>();
+                    orderItem.put("goodName", item.getitemName()); // API要求字段名
+                    orderItem.put("piece", item.getitemQuantity()); // API要求字段名
+                    // 使用BigDecimal确保price格式精确
+                    BigDecimal price = item.getitemUnitPrice();
+                    if (price != null) {
+                        orderItem.put("price", price);
+                    }
+                    // orderItem.put("grossWeight", item.getitemWeight()); // 毛重，API字段名,我方没有这个值
+                    orderItem.put("currencySystem", item.getcurrencyType()); // 币制
+                    orderItem.put("reportUnit", item.getitemUnit()); // 申报计量单位
+                    orderItems.add(orderItem);
+                }
+            }
+        }
+        // 确保orderItems不为空数组，API要求必填
+        if (orderItems.isEmpty()) {
+            Map<String, Object> defaultItem = new HashMap<>();
+            defaultItem.put("goodName", "商品");
+            defaultItem.put("piece", 1);
+            defaultItem.put("price", new BigDecimal("1.00000000"));
+            defaultItem.put("currencySystem", "CNY"); // 使用CNY币制
+            defaultItem.put("reportUnit", "件");
+            orderItems.add(defaultItem);
+        }
+        params.put("orderItems", orderItems);
         
         return params;
     }
