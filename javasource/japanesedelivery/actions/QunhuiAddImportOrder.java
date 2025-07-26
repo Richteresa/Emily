@@ -135,8 +135,6 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
                     logisticsId = (String) data.get("expressNo");
                     orderId = (String) data.get("cusOrderNo");
                     orderNo = (String) data.get("orderNo");
-                    mark = (String) data.get("twoDimensionCode");
-                    extended = (String) data.get("printUrl");
                 }
                 // 即使订单已存在，也设置消息信息
                 message = (String) responseBody.get("msg");
