@@ -141,8 +141,13 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
                 messageDetail = message;
             } else {
                 code = String.valueOf(responseCode);
-                message = (String) responseBody.get("msg");
-                messageDetail = message;
+                // 优化错误信息处理
+                String rawMessage = (String) responseBody.get("msg");
+                String rawData = (String) responseBody.get("data");
+                
+                // 提取有用的错误信息
+                message = extractErrorMessage(rawMessage, rawData);
+                messageDetail = rawMessage; // 保留原始错误信息作为详细信息
             }
             
             respVO.setValue(getContext(), String.valueOf(ZtoIntlImportOrderResp.MemberNames.logisticsId), logisticsId);
@@ -340,6 +345,38 @@ public class QunhuiAddImportOrder extends CustomJavaAction<IMendixObject>
         params.put("orderItems", orderItems);
         
         return params;
+    }
+    
+    /**
+     * 提取有用的错误信息
+     * @param rawMessage 原始错误消息
+     * @param rawData 原始错误数据
+     * @return 提取后的错误信息
+     */
+    private String extractErrorMessage(String rawMessage, String rawData) {
+        if (rawMessage == null) {
+            return "未知错误";
+        }
+        
+        // 提取QhException:后面的内容
+        if (rawMessage.contains("QhException:")) {
+            String[] parts = rawMessage.split("QhException:");
+            if (parts.length > 1) {
+                String qhExceptionContent = parts[1].trim();
+                // 清理掉可能的堆栈信息，取到第一个换行符或制表符
+                int endIndex = qhExceptionContent.indexOf('\n');
+                if (endIndex == -1) {
+                    endIndex = qhExceptionContent.indexOf('\t');
+                }
+                if (endIndex != -1) {
+                    qhExceptionContent = qhExceptionContent.substring(0, endIndex);
+                }
+                return qhExceptionContent.trim();
+            }
+        }
+        
+        // 如果没有QhException，返回原始消息
+        return rawMessage;
     }
 
 
