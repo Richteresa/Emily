@@ -15,6 +15,7 @@ import com.mendix.systemwideinterfaces.core.IMendixObject;
 import japanesedelivery.proxies.ZtoImportBcOrder;
 import japanesedelivery.proxies.ZtoIntlOrderItem;
 import japanesedelivery.proxies.ZtoOrderEntity;
+import japanesedelivery.actions.YtoAddImportOrder;
 
 public class AddImportOrder extends CustomJavaAction<IMendixObject>
 {
@@ -61,7 +62,11 @@ public class AddImportOrder extends CustomJavaAction<IMendixObject>
             // 调用QunhuiAddImportOrder.java
             QunhuiAddImportOrder qunhuiAddImportOrder = new QunhuiAddImportOrder(getContext(), __ztoImportBcOrder, __ztoIntlOrderItemList, __ztoOrderEntity, __channelConfig);
             return qunhuiAddImportOrder.executeAction(); // 直接返回群辉的处理结果
-        }
+        }else if (name.equals("YTO")) {
+            // 调用YuanTongAddImportOrder.java
+            YtoAddImportOrder ytoAddImportOrder = new YtoAddImportOrder(getContext(), __ztoImportBcOrder, __ztoIntlOrderItemList, __ztoOrderEntity, __channelConfig);
+            return ytoAddImportOrder.executeAction(); // 直接返回圆通的处理结果
+		}
         
         // 如果渠道名称不匹配，抛出异常
         throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Unsupported channel: " + name);
