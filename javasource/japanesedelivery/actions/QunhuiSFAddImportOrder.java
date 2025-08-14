@@ -286,7 +286,7 @@ public class QunhuiSFAddImportOrder extends CustomJavaAction<IMendixObject>
         // 基本订单信息
         params.put("cusOrderNo", ztoImportBcOrder.getorderId());
         params.put("expressServerType", "GNQG"); // 快递业务类型，必填，使用字符串
-        params.put("expressSupplier", "ZTO"); // 快递商代码，必填
+        params.put("expressSupplier", "SF"); // 快递商代码，必填
         
         // 发件人信息 - 使用API要求的字段名
         params.put("sender", ztoImportBcOrder.getshipper());
@@ -330,6 +330,7 @@ public class QunhuiSFAddImportOrder extends CustomJavaAction<IMendixObject>
                     // orderItem.put("grossWeight", item.getitemWeight()); // 毛重，API字段名,我方没有这个值
                     orderItem.put("currencySystem", item.getcurrencyType()); // 币制
                     orderItem.put("reportUnit", item.getitemUnit()); // 申报计量单位
+                    orderItem.put("proMarCountry", "JP"); // 产销国，顺丰必填
                     orderItems.add(orderItem);
                 }
             }
@@ -342,9 +343,19 @@ public class QunhuiSFAddImportOrder extends CustomJavaAction<IMendixObject>
             defaultItem.put("price", new BigDecimal("1.00000000"));
             defaultItem.put("currencySystem", "CNY"); // 使用CNY币制
             defaultItem.put("reportUnit", "件");
+            defaultItem.put("proMarCountry", "JP"); // 产销国，顺丰必填
             orderItems.add(defaultItem);
         }
         params.put("orderItems", orderItems);
+        
+        // 顺丰同城配送参数，必传
+        Map<String, Object> sfSameCityParam = new HashMap<>();
+        sfSameCityParam.put("isAppoint", 0); // 0:非预约单;1:预约单
+        sfSameCityParam.put("isInsured", 0); // 是否保价,0:非保价;1:保价
+        sfSameCityParam.put("productType", 0); // 物品类型
+        sfSameCityParam.put("sfShopId", ""); // 顺丰店铺ID
+        sfSameCityParam.put("weightGram", 0); // 物品重量（单位：克）
+        params.put("sfSameCityParam", sfSameCityParam);
         
         return params;
     }
